@@ -1,2 +1,2 @@
 # ferd.ai
-ferda
+ferda beer ferda
