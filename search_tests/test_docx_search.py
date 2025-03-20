@@ -2,7 +2,7 @@ import os
 import sys
 from docx import Document
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from text_extraction import search_in_docx
+from file_content_extractions.text_extraction import search_in_docx
 
 # Creating a test docx file
 def create_test_docx(filename="test.docx"):
