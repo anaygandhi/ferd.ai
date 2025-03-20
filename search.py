@@ -1,11 +1,32 @@
 import fitz
 from docx import Document
-
+import pytesseract
+from pdf2image import convert_from_path
+from PIL import Image 
 
 # Extracting text from a PDF file
 def search_in_pdf(file_path):
     doc = fitz.open(file_path)
-    return "".join([page.get_text() for page in doc])
+    extracted_text = ""
+    for page in doc:
+        text = page.get_text()
+        if text.strip():
+            extracted_text += text + "\n"
+        else:
+            extracted_text += pdf_ocr_extraction(file_path) + "\n"
+    return extracted_text.strip() 
+    
+
+# Extracting text from a scanned PDF file using OCR
+def pdf_ocr_extraction(file_path):
+    images = convert_from_path(file_path)  
+    extracted_text = []
+
+    for image in images:
+        text = pytesseract.image_to_string(image)
+        extracted_text.append(text)
+
+    return "\n".join(extracted_text)
 
 
 # Extracting text from a docx file
