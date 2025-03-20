@@ -2,7 +2,7 @@ from fpdf import FPDF
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from search import search_in_pdf
+from text_extraction import search_in_pdf
 
 # Creating a test PDF file
 def create_test_pdf(filename="test.pdf"):
