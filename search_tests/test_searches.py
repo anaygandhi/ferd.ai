@@ -3,8 +3,8 @@ import os
 import sys
 from docx import Document
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from pdf_search import search_in_pdf
-from pdf_search import search_in_docx
+from search import search_in_pdf
+from search import search_in_docx
 
 # Creating a test PDF file
 def create_test_pdf(filename="test.pdf"):
