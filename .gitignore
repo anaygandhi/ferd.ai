@@ -5,4 +5,4 @@ test.txt
 *.pyo
 access_token.txt
 models/*.gguf
-llama/*
+llama-cpp-python-anay/*
