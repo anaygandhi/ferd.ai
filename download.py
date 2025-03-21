@@ -6,8 +6,8 @@
 
 import os
 
-model_url = "https://huggingface.co/QuantFactory/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct.Q6_K.gguf?download=true"
-model_path = "models/Meta-Llama-3-8B-Instruct.Q6_K.gguf"
+model_url = "https://huggingface.co/QuantFactory/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct.Q4_0.gguf?download=true"
+model_path = "models/Meta-Llama-3-8B-Instruct.Q4_0.gguf"
 
 # Ensure the models directory exists
 os.makedirs("models", exist_ok=True)
