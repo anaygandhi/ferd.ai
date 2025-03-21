@@ -3,3 +3,5 @@ test.docx
 test.txt
 *.pyc
 *.pyo
+access_token.txt
+models/*.gguf
