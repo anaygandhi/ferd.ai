@@ -3,7 +3,7 @@ from llama_index.llms.llama_cpp import LlamaCPP
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
 # Load documents
-reader = SimpleDirectoryReader('test_dir')
+reader = SimpleDirectoryReader('test_dir/')
 docs = reader.load_data()
 
 # Transformer
@@ -11,7 +11,7 @@ embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-
 
 # Load Model
 llm = LlamaCPP(
-    model_path="/Users/anaygandhi/ferd.ai/models/Meta-Llama-3-8B-Instruct.Q4_0.gguf",
+    model_path="models/Meta-Llama-3-8B-Instruct.Q4_0.gguf",
     temperature=0.7,
     max_new_tokens=256,
     context_window=4096,
