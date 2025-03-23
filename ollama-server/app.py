@@ -25,11 +25,22 @@ def generate():
 
     if not prompt:
         return jsonify({"error": "No prompt provided"}), 400
+    
+     # Get max_tokens from request, default to 100 if not specified
+    max_tokens = data.get("max_tokens", 100)
+    try:
+        max_tokens = int(max_tokens)
+        if max_tokens <= 0:
+            max_tokens = 100
+    except (TypeError, ValueError):
+        max_tokens = 100
+
 
     payload = {
         "model": MODEL_ID,
         "prompt": prompt,
-        "stream": False
+        "stream": False,
+        "max_tokens": max_tokens
     }
 
     try:
