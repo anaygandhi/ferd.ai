@@ -21,7 +21,28 @@ services:
     depends_on:
       - ollama
     volumes:
-      - .:/app  # Optional: live sync local changes (useful in dev)
+      - .:/app
+    entrypoint: |
+      bash -c '
+      echo "Waiting for Ollama to be accessible at $$OLLAMA_URL..."
+      until curl -s -o /dev/null -w "%{http_code}" $$OLLAMA_URL/api/version | grep -q "200"; do
+        echo "Ollama is not ready yet... waiting"
+        sleep 2
+      done
+      echo "Ollama is up and running!"
+      
+      echo "Checking if model $$INFERENCE_MODEL exists..."
+      TAGS_RESPONSE=$$(curl -s $$OLLAMA_URL/api/tags)
+      if echo "$$TAGS_RESPONSE" | grep -q "$$INFERENCE_MODEL"; then
+        echo "Model $$INFERENCE_MODEL already exists."
+      else
+        echo "Model $$INFERENCE_MODEL not found. Pulling now..."
+        curl -X POST $$OLLAMA_URL/api/pull -H "Content-Type: application/json" -d "{\"name\": \"$$INFERENCE_MODEL\"}"
+        echo "Model $$INFERENCE_MODEL pulled successfully!"
+      fi
+      
+      python app.py
+      '
 
 volumes:
   ollama_data:
