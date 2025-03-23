@@ -69,6 +69,7 @@ dependencies:
       - llama-index-readers-llama-parse==0.4.0
       - llama-parse==0.6.4.post1
       - llama_cpp_python==0.3.8
+      - llama_stack_client==0.1.7
       - markdown-it-py==3.0.0
       - MarkupSafe==3.0.2
       - marshmallow==3.26.1

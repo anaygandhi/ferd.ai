@@ -9,5 +9,13 @@ and         `conda activate llama-env`
 
 As you find more python packages, add to `enviornment.yml` under pip.
 
+Set a default model (Using 3.2-1b-fp16 1 billion params ~1 GB of ram)
+`export INFERENCE_MODEL=llama3.2:1b-instruct-fp16`
+
+Running the ollama server 
+`docker run -d \ \n--name ollama \ \n-p 11434:11434 \ \n-v ollama:/root/.ollama \ \nollama/ollama`
+
+Then pull the model onto the server
+`docker exec -it ollama bash`
 
 Run download.py to use the model using command: python3 download.py
