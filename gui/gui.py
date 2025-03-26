@@ -5,7 +5,7 @@ class MyApp(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle('PyQt5 Simple App with Backend')
+        self.setWindowTitle('Dumbass gui v1')
         self.setGeometry(100, 100, 600, 400)
 
         layout = QVBoxLayout()
