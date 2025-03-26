@@ -10,6 +10,7 @@ payload = {"prompt": prompt}
 headers = {"Content-Type": "application/json"}
 
 
+
 response = requests.post(url, data=json.dumps(payload), headers=headers)
 
 if response.status_code == 200:
