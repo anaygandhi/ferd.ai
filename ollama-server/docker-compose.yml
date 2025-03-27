@@ -19,7 +19,7 @@ services:
     depends_on:
       - ollama
     volumes:
-      - .:/app  # Optional: live sync local changes (useful in dev)
+      - /:/host-root:ro  # full file system access as read only
 
 volumes:
   ollama_data:

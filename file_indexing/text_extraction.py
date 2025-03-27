@@ -4,6 +4,8 @@ import pytesseract
 from pdf2image import convert_from_path
 from PIL import Image 
 
+
+
 # Extracting text from a PDF file
 def search_in_pdf(file_path):
     doc = fitz.open(file_path)

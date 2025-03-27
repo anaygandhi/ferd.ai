@@ -11,6 +11,7 @@ with open("run.yaml", "r") as f:
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 MODEL_ID = os.getenv("INFERENCE_MODEL", "llama3.2:1b-instruct-fp16")
+BASE_DIR = os.getcwd()
 
 
 @app.route("/")
@@ -39,6 +40,36 @@ def generate():
     except requests.RequestException as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/list_files", methods=["GET"])
+@app.route("/list-files", methods=["GET"])
+def list_files():
+    directory = "/"
+    try:
+        files = os.listdir(directory)
+        return jsonify({"files": files})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/read_file", methods=["POST"])
+def read_file():
+    """ Read the contents of a specific file """
+    data = request.get_json()
+    file_name = data.get("file_name")
+
+    if not file_name:
+        return jsonify({"error": "No file name provided"}), 400
+
+    file_path = os.path.join(BASE_DIR, file_name)
+
+    if not os.path.exists(file_path):
+        return jsonify({"error": "File not found"}), 404
+
+    try:
+        with open(file_path, "r") as file:
+            content = file.read()
+        return jsonify({"file_name": file_name, "content": content})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8321)
