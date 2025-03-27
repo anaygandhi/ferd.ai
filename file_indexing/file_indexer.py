@@ -95,7 +95,8 @@ def search_files(query, top_k=5):
     file_names = []
     for idx in indices[0]:
         if idx != -1:
-            cursor.execute('SELECT file_name FROM file_metadata WHERE id = ?', (idx+1,))
+            print(f"Index: {idx}")
+            cursor.execute(f"SELECT file_name FROM file_metadata WHERE id = {idx + 1}")
             result = cursor.fetchone()
             if result:
                 file_names.append(result[0])
@@ -105,6 +106,6 @@ def search_files(query, top_k=5):
 # Example usage
 index_directory('/Users/anaygandhi/Downloads/CS311/')
 
-query = "Find pdf files"
+query = "Find tearsheets"
 top_files = search_files(query)
 print(f"Top files: {top_files}")
