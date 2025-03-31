@@ -7,3 +7,5 @@ access_token.txt
 models/*.gguf
 llama-cpp-python-anay/*
 test_dir/*
+*.db
+*.bin
