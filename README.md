@@ -16,7 +16,7 @@ For MacOS: `export INFERENCE_MODEL=llama3.2:1b-instruct-fp16`
 For Windows: `$env:INFERENCE_MODEL="llama3.2:1b-instruct-fp16"`
 
 Running the ollama server 
-`docker run -d \ \n--name ollama \ \n-p 11434:11434 \ \n-v ollama:/root/.ollama \ \nollama/ollama`
+`docker run -d --name ollama -p 11434:11434 -v ollama:/root/.ollama ollama/ollama`
 
 Then pull the model onto the server
 `docker exec -it ollama bash`
