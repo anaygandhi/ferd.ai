@@ -50,9 +50,30 @@ def list_files():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# @app.route("/read_file", methods=["POST"])
+# def read_file():
+#     """ Read the contents of a specific file """
+#     data = request.get_json()
+#     file_name = data.get("file_name")
+
+#     if not file_name:
+#         return jsonify({"error": "No file name provided"}), 400
+
+#     file_path = os.path.join(BASE_DIR, file_name)
+
+#     if not os.path.exists(file_path):
+#         return jsonify({"error": "File not found"}), 404
+
+#     try:
+#         with open(file_path, "r") as file:
+#             content = file.read()
+#         return jsonify({"file_name": file_name, "content": content})
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
+
 @app.route("/read_file", methods=["POST"])
 def read_file():
-    """ Read the contents of a specific file """
+    """ Read the contents of a specific file and return the first 200 words as readable text """
     data = request.get_json()
     file_name = data.get("file_name")
 
@@ -65,11 +86,17 @@ def read_file():
         return jsonify({"error": "File not found"}), 404
 
     try:
-        with open(file_path, "r") as file:
+        with open(file_path, "r", encoding="utf-8") as file:
             content = file.read()
-        return jsonify({"file_name": file_name, "content": content})
+
+        words = content.split()
+        first_200_words = ' '.join(words[:200])
+
+        return jsonify({"file_name": file_name, "content": first_200_words})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8321)

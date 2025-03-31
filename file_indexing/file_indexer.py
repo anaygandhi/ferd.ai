@@ -104,8 +104,8 @@ def search_files(query, top_k=5):
     return file_names
 
 # Example usage
-index_directory('/Users/anaygandhi/Downloads/CS311/')
+index_directory('./test_pdfs')
 
-query = "Find tearsheets"
+query = "Find the datasheet"
 top_files = search_files(query)
 print(f"Top files: {top_files}")
