@@ -1,9 +1,11 @@
-import requests
-import json
 import os
+import json
+import requests
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:8321/generate")
-MODEL_ID = os.getenv("INFERENCE_MODEL", "llama3.2:1b-instruct-fp16")
 
 def get_response_from_model(prompt):
     payload = {"prompt": prompt}

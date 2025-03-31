@@ -10,11 +10,11 @@ FILE_DIRECTORY = '/Users/anaygandhi/ferd.ai/test_pdfs'
 def generate_response(file_name, file_content):
     """ Sends file content to Ollama's /generate endpoint with the structured query """
     query = (
-        "Find the datasheet in this document. "
-        "Return ONLY a valid JSON response with two keys: "
-        "'file_name' (string) and 'confidence_score' (integer from 1-100). "
-        "Example response format: {'file_name': 'example.pdf', 'confidence_score': 85}. "
-        "DO NOT include any additional text outside of the JSON structure."
+        "Is this document a datasheet?"
+        "Return a JSON response with two keys: "
+        "'file_name' (string) and 'confidence_score' (integer, 1-100 representing your confidence in the fact that this document is a datasheet). "
+        " Don't create a new file_name - just the keep the name that is inputted (the path)"
+        "Example: {\"file_name\": \"example.pdf\", \"confidence_score\": 85}"
     )
 
     data = {
@@ -23,13 +23,13 @@ def generate_response(file_name, file_content):
     
     try:
         print(f"Sending request for: {file_name}")
-        response = requests.post(f"{OLLAMA_SERVER_URL}/generate", json=data, timeout=120)  # Increased timeout
+        response = requests.post(f"{OLLAMA_SERVER_URL}/generate", json=data, timeout=120)
         response.raise_for_status()  
 
         response_data = response.json()
-        print(f"Ollama response for {file_name}: {response_data}")  # Debugging response
+        print(f"Ollama response for {file_name}: {response_data['response']}")
 
-        return response_data
+        return response_data['response']
     
     except requests.Timeout:
         print(f"Error: Request timed out for '{file_name}'. Trying again with a longer timeout...")
@@ -62,7 +62,8 @@ def send_files_to_ollama(files):
             response_data = generate_response(file, first_200_words)
 
             if response_data:
-                score = response_data.get("confidence_score")
+                response_obj = json.loads(response_data)
+                score = response_obj.get("confidence_score", None)
                 
                 if score is None:
                     print(f"Warning: No confidence score received for '{file}'. Skipping.")
