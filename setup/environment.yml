@@ -1,0 +1,15 @@
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - fastapi
+      - uvicorn
+      - pandas
+      - numpy
+      - llama-index-core
+      - llama-index-cli
+      - llama-parse
+      - llama-index-readers-file
+      - httpx
+      - orjson
+      - rich
