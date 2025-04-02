@@ -58,6 +58,14 @@ ollama start
 
 This will run the ollama model at http://localhost:11434. 
 
+Then to activate the conda environment, open a new terminal and use: 
+
+```bash 
+conda activate llama-env
+```
+
+This will activate the conda environment with the required python dependencies so you can run the other scripts. 
+
 #### OPTION 2: Docker container
 
 This will create and start a docker container to run the Ollama model. 
@@ -103,6 +111,14 @@ docker start ollama-instance
 ```
 
 This will run the ollama model at http://localhost:11434. 
+
+Then to activate the conda environment, open a new terminal and use: 
+
+```bash 
+conda activate llama-env
+```
+
+This will activate the conda environment with the required python dependencies so you can run the other scripts. 
 
 ### To use the query_interpretation folder:
 
