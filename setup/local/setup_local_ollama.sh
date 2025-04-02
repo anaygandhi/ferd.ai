@@ -41,9 +41,19 @@ echo "Installing Python dependencies"
 pip install -r $REQUIREMENTS_TXT
 
 # --- 3. Install Ollama ---
-# Install ollama cli utils 
 echo "Installing Ollama"
-curl -fsSL $OLLAMA_INSTALL_URI | sh
+
+# Check if the OS is macOS or Linux
+OS="$(uname -s)"
+if [ "$OS" = "Darwin" ]; then
+  echo "Detected macOS, using Homebrew to install Ollama"
+  brew install ollama
+elif [ "$OS" = "Linux" ]; then
+  curl -fsSL $OLLAMA_INSTALL_URI | sh
+else
+  echo "Unsupported OS: $OS"
+  exit 1
+fi
 
 # --- 4. Start Ollama Server ---
 # Start the ollama server
