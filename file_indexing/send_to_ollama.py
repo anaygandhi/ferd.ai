@@ -2,6 +2,7 @@ import os
 import requests
 from metadata_extraction import extract_metadata
 from text_extraction import search_in_file
+from file_indexer import search_files
 import json
 
 OLLAMA_SERVER_URL = 'http://localhost:8321'
@@ -14,6 +15,7 @@ def generate_response(file_name, file_content):
         "Return a JSON response with two keys: "
         "'file_name' (string) and 'confidence_score' (integer, 1-100 representing your confidence in the fact that this document is a datasheet). "
         " Don't create a new file_name - just the keep the name that is inputted (the path)"
+        "Don't use tha backticks in the JSON response. "
         "Example: {\"file_name\": \"example.pdf\", \"confidence_score\": 85}"
     )
 
@@ -88,5 +90,6 @@ def send_files_to_ollama(files):
 
 
 if __name__ == "__main__":
-    top_files = ['stm32f413rh.pdf', 'sample-transcript.pdf', '2024-template_bullet.docx', 'llm-ebook-part1-1.pdf', 'calcmolzon.pdf']
+    search_query = "Find the datasheet"
+    top_files = search_files(search_query)
     send_files_to_ollama(top_files)
