@@ -6,7 +6,7 @@ from file_indexer import search_files
 import json
 
 OLLAMA_SERVER_URL = 'http://localhost:8321'
-FILE_DIRECTORY = '/Users/anaygandhi/ferd.ai/test_pdfs'
+FILE_DIRECTORY = './test_pdfs'
 
 def generate_response(file_name, file_content):
     """ Sends file content to Ollama's /generate endpoint with the structured query """
@@ -15,7 +15,7 @@ def generate_response(file_name, file_content):
         "Return a JSON response with two keys: "
         "'file_name' (string) and 'confidence_score' (integer, 1-100 representing your confidence in the fact that this document is a datasheet). "
         " Don't create a new file_name - just the keep the name that is inputted (the path)"
-        "Don't use tha backticks in the JSON response. "
+        "Don't use the backticks in the JSON response. "
         "Example: {\"file_name\": \"example.pdf\", \"confidence_score\": 85}"
     )
 
@@ -44,7 +44,7 @@ def generate_response(file_name, file_content):
 def send_files_to_ollama(files):
     best_match = None
     highest_score = -float('inf')  
-    
+
     for file in files:
         file_path = os.path.join(FILE_DIRECTORY, file)
         

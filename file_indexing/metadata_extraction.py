@@ -1,12 +1,12 @@
 import os
 import time
-import fitz 
+import pymupdf 
 from docx import Document
 
 # Extracting metadata from a PDF file
 def extract_pdf_metadata(pdf_path):
     try:
-        doc = fitz.open(pdf_path)
+        doc = pymupdf.open(pdf_path)
         metadata = doc.metadata  
         return {
             "title": metadata.get("title", ""),

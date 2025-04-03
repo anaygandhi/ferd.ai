@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import time
-import fitz
+import pymupdf
 import sqlite3
 import numpy as np
 from docx import Document

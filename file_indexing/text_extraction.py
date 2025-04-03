@@ -1,4 +1,4 @@
-import fitz
+import pymupdf
 from docx import Document
 import pytesseract
 from pdf2image import convert_from_path
@@ -6,7 +6,7 @@ from PIL import Image
 
 # Extracting text from a PDF file
 def search_in_pdf(file_path):
-    doc = fitz.open(file_path)
+    doc = pymupdf.open(file_path)
     extracted_text = ""
     for page in doc:
         text = page.get_text()
