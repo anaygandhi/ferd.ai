@@ -38,5 +38,10 @@ app.register_blueprint(ai_bp)     # AI Assistant blueprint
 
 # --- Run --- #
 if __name__ == "__main__":
+    print('\033[92mStarting flask server...\033[0m')
+    
+    # Create and serve the WSGI server
     http_server = WSGIServer(('0.0.0.0', 8321), app)
     http_server.serve_forever()
+    
+    
