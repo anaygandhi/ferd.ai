@@ -2,10 +2,10 @@
 
 import { useState } from "react"
 import { Bot, Send, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { Button } from "./ui/button"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card"
+import { Input } from "./ui/input"
+import { ScrollArea } from "./ui/scroll-area"
 
 interface AIAssistantProps {
   onClose: () => void
