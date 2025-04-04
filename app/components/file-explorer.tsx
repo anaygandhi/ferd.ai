@@ -41,7 +41,7 @@ import {
 import { FileItem } from "@/components/file-item"
 import { FolderTree } from "@/components/folder-tree"
 import { AIAssistant } from "@/components/ai-assistant"
-import { getElectronAPI, type FileInfo } from "@/lib/electron-api"
+import { getElectronAPI, type FileInfo, type ElectronAPI } from "@/lib/electron-api"
 import { formatFileSize } from "@/lib/file-utils"
 import {
   Dialog,
@@ -59,88 +59,54 @@ export function FileExplorer() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [currentPath, setCurrentPath] = useState<string>("")
   const [files, setFiles] = useState<FileInfo[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false)
   const [newFolderName, setNewFolderName] = useState("")
   const [selectedFiles, setSelectedFiles] = useState<string[]>([])
 
-  const electronAPI = getElectronAPI()
-  const isElectron = !!electronAPI
+  const electronAPI: ElectronAPI | undefined = getElectronAPI()
 
-  // Initialize with home directory
-  useEffect(() => {
-    if (isElectron) {
-      const initializeFileSystem = async () => {
-        try {
-          // Start with empty path to get home directory
-          const fileList = await electronAPI.listDirectory("")
-          setFiles(fileList)
+  const handleSelectDirectory = async () => {
+    try {
+      console.log("Opening directory picker...");
+      setIsLoading(true);
+      const files = await electronAPI.listDirectory("/");
+      console.log("Files in selected directory:", files);
 
-          // Get the home directory path from the first result
-          if (fileList.length > 0) {
-            const homePath = path.dirname(fileList[0].path)
-            setCurrentPath(homePath)
-          }
-
-          setIsLoading(false)
-        } catch (error) {
-          console.error("Error initializing file system:", error)
-          setIsLoading(false)
-        }
+      if (!files || files.length === 0) {
+        console.warn("No files returned from listDirectory");
+        setFiles([]); // Explicitly set empty state
+        toast({
+          title: "No files found",
+          description: "The selected directory is empty or inaccessible.",
+          variant: "default",
+        });
+        return;
       }
 
-      initializeFileSystem()
-    } else {
-      // Mock data for web preview
-      setIsLoading(false)
+      setFiles(files);
+      setCurrentPath("/"); // Set a placeholder path
+    } catch (error) {
+      console.error("Error selecting directory:", error);
+      toast({
+        title: "Error selecting directory",
+        description: error.message || "Could not access the selected directory.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-  }, [isElectron, electronAPI])
-
-  // Load files when path changes
-  useEffect(() => {
-    if (isElectron && currentPath) {
-      const loadFiles = async () => {
-        setIsLoading(true)
-        try {
-          const fileList = await electronAPI.listDirectory(currentPath)
-          setFiles(fileList)
-        } catch (error) {
-          console.error("Error loading files:", error)
-          toast({
-            title: "Error loading files",
-            description: "Could not access this directory",
-            variant: "destructive",
-          })
-        } finally {
-          setIsLoading(false)
-        }
-      }
-
-      loadFiles()
-    }
-  }, [currentPath, isElectron, electronAPI])
+  };
 
   const navigateToPath = (newPath: string) => {
     setCurrentPath(newPath)
     setSelectedFiles([])
   }
 
-//   const navigateUp = () => {
-//     if (currentPath) {
-//       const parentPath = path.dirname(currentPath)
-//       if (parentPath !== currentPath) {
-//         // Avoid infinite loop at root
-//         navigateToPath(parentPath)
-//       }
-//     }
-//   }
-
   const handleFileOpen = (file: FileInfo) => {
     if (file.isDirectory) {
       navigateToPath(file.path)
     } else {
-      // For non-directory files, we could implement preview functionality
-      // or open with default application
       toast({
         title: "File selected",
         description: `${file.name} (${formatFileSize(file.size)})`,
@@ -149,7 +115,7 @@ export function FileExplorer() {
   }
 
   const handleFileDelete = async (filePath: string) => {
-    if (!isElectron) return
+    if (!isElectron || !electronAPI) return
 
     try {
       await electronAPI.deleteFile(filePath)
@@ -171,7 +137,7 @@ export function FileExplorer() {
   }
 
   const handleCreateFolder = async () => {
-    if (!isElectron || !newFolderName.trim()) return
+    if (!isElectron || !electronAPI || !newFolderName.trim()) return
 
     try {
       const newFolderPath = path.join(currentPath, newFolderName.trim())
@@ -195,19 +161,6 @@ export function FileExplorer() {
         description: "Could not create the folder",
         variant: "destructive",
       })
-    }
-  }
-
-  const handleSelectDirectory = async () => {
-    if (!isElectron) return
-
-    try {
-      const selectedDir = await electronAPI.selectDirectory()
-      if (selectedDir) {
-        navigateToPath(selectedDir)
-      }
-    } catch (error) {
-      console.error("Error selecting directory:", error)
     }
   }
 
@@ -462,11 +415,12 @@ export function FileExplorer() {
                 <div className="flex h-full items-center justify-center p-8">
                   <div className="text-center">
                     <Folder className="h-12 w-12 text-muted-foreground mx-auto" />
-                    <h3 className="mt-4 text-lg font-medium">Empty folder</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">This folder has no files or subfolders</p>
-                    <Button className="mt-4" onClick={() => setShowNewFolderDialog(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      New Folder
+                    <h3 className="mt-4 text-lg font-medium">No files found</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Select a directory to view its contents.
+                    </p>
+                    <Button onClick={handleSelectDirectory} className="mt-4">
+                      Select Directory
                     </Button>
                   </div>
                 </div>
@@ -484,8 +438,8 @@ export function FileExplorer() {
                       file={file}
                       viewMode={viewMode}
                       onOpen={() => handleFileOpen(file)}
-                      onDelete={() => handleFileDelete(file.path)}
-                      onSelect={(isSelected) => handleFileSelection(file.path, isSelected)}
+                      onDelete={() => console.log("Delete functionality not supported in browser")}
+                      onSelect={(isSelected) => console.log("Selection functionality not supported in browser")}
                       isSelected={selectedFiles.includes(file.path)}
                     />
                   ))}

@@ -1,0 +1,21 @@
+{
+  "name": "ai-file-explorer",
+  "version": "0.1.0",
+  "main": "./main.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "electron": "electron .",
+    "electron-dev": "concurrently \"npm run dev\" \"electron .\""
+  },
+  "dependencies": {
+    "next": "^13.5.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "concurrently": "^7.6.0",
+    "electron": "^25.3.1"
+  }
+}
