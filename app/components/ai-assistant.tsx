@@ -43,7 +43,7 @@ export function AIAssistant({ onClose }: AIAssistantProps) {
       }
 
       const data = await response.json();
-      const aiResponse = data.content || "Sorry, I couldn't process your request.";
+      const aiResponse = data.response || "Sorry, I couldn't process your request.";
 
       setMessages((prev) => [...prev, { role: "assistant", content: aiResponse }]);
     } catch (error) {

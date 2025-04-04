@@ -77,9 +77,11 @@ def read_file():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @app.route("/ai-assistant", methods=["POST"])
 def ai_assistant():
     """Endpoint for AI assistant to interact with the server"""
+    
     data = request.get_json()
     action = data.get("action")
     params = data.get("params", {})
@@ -102,14 +104,17 @@ def ai_assistant():
             res = requests.post(f"{OLLAMA_URL}/api/generate", json=payload)
             res.raise_for_status()
             return jsonify(res.json())
+    
         except requests.RequestException as e:
             return jsonify({"error": f"Request to OLLAMA failed: {str(e)}"}), 500
 
     elif action == "list_files":
         directory = params.get("directory", "/")
+    
         try:
             files = os.listdir(directory)
             return jsonify({"files": files})
+    
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
