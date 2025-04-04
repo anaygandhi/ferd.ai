@@ -1,3 +1,5 @@
 flask
 requests
 pyyaml
+gevent
+flask_cors
