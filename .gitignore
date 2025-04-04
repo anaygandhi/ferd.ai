@@ -9,3 +9,4 @@ llama-cpp-python-anay/*
 test_dir/*
 *.db
 *.bin
+*__pycache__*
