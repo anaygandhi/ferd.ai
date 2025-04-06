@@ -1,111 +1,69 @@
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import time
-import pymupdf
-import sqlite3
-import numpy as np
-from docx import Document
+
+import sqlite3 as sql
 from sentence_transformers import SentenceTransformer
 import faiss
 from tqdm import tqdm  
-from file_indexing.metadata_extraction import extract_metadata
-from file_indexing.text_extraction import search_in_file
 
+from utils import index_directory, search_files
+
+# --- Config --- #
+# Config vars
+INDEX_DIR:str = 'index/'
+EMBEDDING_DIM:int = 384
+
+# Construct paths to the faiss_index.bin and file_metadata.db files
+INDEX_BIN_PATH:str = os.path.join(INDEX_DIR, 'faiss_index.bin')
+METADATA_DB_PATH:str = os.path.join(INDEX_DIR, 'file_metadata.db')
+
+
+# --- Setup --- #
+# Create model
 model = SentenceTransformer('all-MiniLM-L6-v2')  
-embedding_dim = 384
+
+# Create index dir if it doesn't exist
+os.makedirs(INDEX_DIR, exist_ok=True)
 
 # FAISS index setup
-if os.path.exists('faiss_index.bin'):
-    index = faiss.read_index('faiss_index.bin')
-    print("Loaded existing FAISS index.")
+if os.path.exists(INDEX_BIN_PATH):
+    index:faiss.IndexFlatL2 = faiss.read_index(INDEX_BIN_PATH)
+    print("\033[92mLoaded existing FAISS index.\033[0m")
 else:
-    index = faiss.IndexFlatL2(embedding_dim)
+    index:faiss.IndexFlatL2 = faiss.IndexFlatL2(EMBEDDING_DIM)
 
 # SQLite setup
-conn = sqlite3.connect('file_metadata.db')
-cursor = conn.cursor()
+cxn:sql.Connection = sql.connect(METADATA_DB_PATH)
+cursor:sql.Cursor = cxn.cursor()
+
+
+# --- SQLite DB setup --- #
+# Create the file_metadata table if it doesn't already exist
 cursor.execute('''
-CREATE TABLE IF NOT EXISTS file_metadata (
-    id INTEGER PRIMARY KEY,
-    file_path TEXT UNIQUE,
-    file_name TEXT,
-    file_size INTEGER,
-    created TEXT,
-    modified TEXT,
-    embedding BLOB
-)
+    CREATE TABLE IF NOT EXISTS file_metadata (
+        id INTEGER PRIMARY KEY,
+        file_path TEXT UNIQUE,
+        file_name TEXT,
+        file_size INTEGER,
+        created TEXT,
+        modified TEXT,
+        embedding BLOB
+    )
 ''')
-conn.commit()
 
-def index_directory(directory_path):
-    for root, dirs, files in os.walk(directory_path):
-        for file in tqdm(files, desc="Indexing files"):
-            file_path = os.path.join(root, file)
+# Commit changes
+cxn.commit()
 
-            if file_path.endswith(('.pdf', '.docx', '.txt')):
-                try:
-                    cursor.execute('SELECT COUNT(*) FROM file_metadata WHERE file_path = ?', (file_path,))
-                    if cursor.fetchone()[0] > 0:
-                        print(f"File {file_path} already exists in the database. Skipping insertion.")
-                        continue
 
-                    metadata = extract_metadata(file_path)
-                    file_text = search_in_file(file_path)
-                    embedding = model.encode(file_text)
-
-                    if embedding is None or len(embedding) != embedding_dim:
-                        print(f"Failed to generate valid embedding for {file_path}. Skipping.")
-                        continue
-
-                    embedding_array = np.array(embedding, dtype=np.float32).reshape(1, -1)
-                    index.add(embedding_array)
-
-                    cursor.execute('''
-                    INSERT INTO file_metadata (file_path, file_name, file_size, created, modified, embedding)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    ''', (
-                        file_path,
-                        os.path.basename(file_path),
-                        metadata.get('file_size', 0),
-                        metadata.get('created', ''),
-                        metadata.get('modified', ''),
-                        embedding_array.tobytes()
-                    ))
-                    conn.commit()
-
-                except Exception as e:
-                    print(f"Error processing {file_path}: {e}")
-
-    faiss.write_index(index, 'faiss_index.bin')
-    print("FAISS index saved.")
-
-def search_files(query, top_k=5):
-    query_embedding = model.encode(query)
-    query_embedding = np.array(query_embedding, dtype=np.float32).reshape(1, -1)
-
-    if query_embedding.shape[1] != embedding_dim:
-        print("Query embedding has incorrect dimensions. Aborting search.")
-        return []
-
-    _, indices = index.search(query_embedding, top_k)
-
-    print(f"FAISS indices: {indices}")
-
-    file_names = []
-    for idx in indices[0]:
-        if idx != -1:
-            print(f"Index: {idx}")
-            cursor.execute(f"SELECT file_name FROM file_metadata WHERE id = {idx + 1}")
-            result = cursor.fetchone()
-            if result:
-                file_names.append(result[0])
-
-    return file_names
-
-# Example usage
-index_directory('./test_pdfs')
-
-query = "Find the datasheet"
-top_files = search_files(query)
-print(f"Top files: {top_files}")
+# --- Indexer --- #
+# Index the directory
+index_directory(
+    '../test_pdfs',     # Input dir path
+    model,              # Sentence transformer model
+    cxn,                # Sqlite connection
+    cursor,             # Sqlite cursor
+    EMBEDDING_DIM,      # Embedding dim 
+    INDEX_BIN_PATH,
+    index
+)
