@@ -10,7 +10,7 @@
     "lint": "next lint",
     "electron:dev": "concurrently \"npm run dev\" \"npm run electron\"",
     "electron": "wait-on http://localhost:3000 && electron .",
-    "electron:build": "next build && next export -o out && electron-builder"
+    "electron:build": "next build && electron-builder"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.1.4",

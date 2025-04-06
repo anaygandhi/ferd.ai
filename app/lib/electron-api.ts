@@ -2,8 +2,24 @@ export interface ElectronAPI {
   listDirectory: (dirPath: string) => Promise<FileInfo[]>;
   getFileDetails: (filePath: string) => Promise<FileDetails>;
   createDirectory: (dirPath: string) => Promise<{ success: boolean }>;
+  deleteFile: (filePath: string) => Promise<void>;
   platform: "win32" | "darwin" | "linux" | "browser";
   getDownloadsPath: () => Promise<string>;
+}
+
+declare global {
+  interface Window {
+    electronAPI?: ElectronAPI;
+    showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle>;
+  }
+}
+
+// Extend the FileSystemDirectoryHandle interface for keys, values, and entries methods
+interface FileSystemDirectoryHandle {
+  [Symbol.asyncIterator](): AsyncIterableIterator<[string, FileSystemHandle]>;
+  entries(): AsyncIterableIterator<[string, FileSystemHandle]>;
+  keys(): AsyncIterableIterator<string>;
+  values(): AsyncIterableIterator<FileSystemHandle>;
 }
 
 export interface FileInfo {
@@ -26,16 +42,19 @@ export interface FileDetails {
 const browserElectronAPI: ElectronAPI = {
   listDirectory: async (dirPath: string) => {
     console.log(`Listing directory: ${dirPath}`);
+    if (!window.showDirectoryPicker) {
+      throw new Error("showDirectoryPicker is not supported in this environment.");
+    }
     const handle = await window.showDirectoryPicker();
     const files: FileInfo[] = [];
-    for await (const entry of handle.values()) {
+    for await (const [name, entry] of handle.entries()) {
       const isDirectory = entry.kind === "directory";
       const fileInfo: FileInfo = {
-        name: entry.name,
-        path: `${dirPath}/${entry.name}`,
+        name,
+        path: `${dirPath}/${name}`,
         isDirectory,
-        size: isDirectory ? 0 : (await entry.getFile()).size,
-        modified: isDirectory ? "" : (await entry.getFile()).lastModified.toString(),
+        size: isDirectory ? 0 : entry.kind === "file" ? (await (entry as FileSystemFileHandle).getFile()).size : 0,
+        modified: isDirectory ? "" : new Date((await (entry as FileSystemFileHandle).getFile()).lastModified).toISOString(),
         created: "",
         type: isDirectory ? "directory" : "file",
       };
@@ -51,10 +70,14 @@ const browserElectronAPI: ElectronAPI = {
     console.log(`Creating directory: ${dirPath}`);
     return { success: false };
   },
+  deleteFile: async (filePath: string) => {
+    console.log(`Deleting file: ${filePath}`);
+    return Promise.resolve();
+  },
   platform: "browser",
   getDownloadsPath: async () => {
     console.log("Getting Downloads path");
-    return "/downloads"; // Use a placeholder path
+    return "/downloads";
   },
 };
 

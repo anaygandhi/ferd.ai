@@ -53,6 +53,10 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "@/components/ui/use-toast"
 
+function isRunningInElectron(): boolean {
+  return typeof window !== "undefined" && window.navigator.userAgent.toLowerCase().includes("electron");
+}
+
 export function FileExplorer() {
   const [searchQuery, setSearchQuery] = useState("")
   const [showAIAssistant, setShowAIAssistant] = useState(false)
@@ -90,7 +94,7 @@ export function FileExplorer() {
       console.error("Error selecting directory:", error);
       toast({
         title: "Error selecting directory",
-        description: error.message || "Could not access the selected directory.",
+        description: error instanceof Error ? error.message : "Could not access the selected directory.",
         variant: "destructive",
       });
     } finally {
@@ -112,10 +116,12 @@ export function FileExplorer() {
         description: `${file.name} (${formatFileSize(file.size)})`,
       })
     }
+
+    if (!isRunningInElectron() || !electronAPI) return;
   }
 
   const handleFileDelete = async (filePath: string) => {
-    if (!isElectron || !electronAPI) return
+    if (!isRunningInElectron() || !electronAPI) return
 
     try {
       await electronAPI.deleteFile(filePath)
@@ -137,7 +143,7 @@ export function FileExplorer() {
   }
 
   const handleCreateFolder = async () => {
-    if (!isElectron || !electronAPI || !newFolderName.trim()) return
+    if (!isRunningInElectron() || !electronAPI || !newFolderName.trim()) return
 
     try {
       const newFolderPath = path.join(currentPath, newFolderName.trim())
@@ -517,4 +523,3 @@ export function FileExplorer() {
     </div>
   )
 }
-

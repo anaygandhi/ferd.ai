@@ -20,10 +20,11 @@ app.on("ready", () => {
     },
   });
 
-  // Load the Next.js app
-  const startURL = process.env.NODE_ENV === "development"
-    ? "http://localhost:3000" // Development server
-    : `file://${path.join(__dirname, "out", "index.html")}`; // Production build
+  // Determine the URL to load based on the environment
+  const startURL =
+    process.env.NODE_ENV === "development"
+      ? "http://localhost:3000" // Development server
+      : "http://localhost:3000"; // Production server (replace with the port used by `next start`)
 
   console.log("Loading URL:", startURL); // Debugging log
   mainWindow.loadURL(startURL);
