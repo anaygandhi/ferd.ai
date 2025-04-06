@@ -17,7 +17,7 @@ with open("run.yaml", "r") as f:
 
 # Add the config vars to the app so they can be accessed in the blueprints
 app.OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
-app.MODEL_ID = os.getenv("INFERENCE_MODEL", "llama3.2:1b-instruct-fp16")
+app.MODEL_ID = os.getenv("INFERENCE_MODEL", "llama3.2:3b-instruct-fp16")
 app.BASE_DIR = os.getcwd()
 
 # Log incoming requests
