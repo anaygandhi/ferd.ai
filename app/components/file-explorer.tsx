@@ -325,9 +325,9 @@ export function FileExplorer() {
   return (
     <div className="flex h-screen w-full overflow-hidden">
       {/* Sidebar */}
-      <div className="hidden w-64 flex-col border-r bg-background p-2 md:flex">
-        <div className="flex items-center justify-between py-2">
-          <h2 className="text-lg font-semibold">AI Explorer</h2>
+      <div className="hidden w-64 flex-col border-r bg-gray-100 p-2 md:flex">
+        <div className="flex items-center justify-between py-2 ml-2 mt-3">
+          <h2 className="text-lg font-bold">AI Explorer</h2>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>

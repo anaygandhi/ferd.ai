@@ -18,6 +18,8 @@ import {
   Tag,
   Trash,
   Folder,
+  Download,
+  Share,
 } from "lucide-react"
 import path from "path-browserify"
 import {
@@ -252,56 +254,51 @@ interface FileContextMenuProps {
 
 function FileContextMenu({ file, onOpen, onDelete }: FileContextMenuProps) {
   return (
-    <ContextMenuContent>
-      <ContextMenuItem onClick={onOpen}>Open</ContextMenuItem>
-      {!file.isDirectory && <ContextMenuItem>Download</ContextMenuItem>}
-      <ContextMenuItem>Share</ContextMenuItem>
+    <ContextMenuContent className="w-48 bg-white shadow-lg rounded-md">
+      <ContextMenuItem onClick={onOpen}>
+        <File className="mr-2 h-4 w-4 text-muted-foreground" />
+        Open
+      </ContextMenuItem>
+      {!file.isDirectory && (
+        <ContextMenuItem>
+          <Download className="mr-2 h-4 w-4 text-muted-foreground" />
+          Download
+        </ContextMenuItem>
+      )}
+      <ContextMenuItem>
+        <Share className="mr-2 h-4 w-4 text-muted-foreground" />
+        Share
+      </ContextMenuItem>
       <ContextMenuSeparator />
       <ContextMenuItem>
-        <Pencil className="mr-2 h-4 w-4" />
+        <Pencil className="mr-2 h-4 w-4 text-muted-foreground" />
         Rename
       </ContextMenuItem>
       <ContextMenuSub>
         <ContextMenuSubTrigger>
-          <Tag className="mr-2 h-4 w-4" />
-          Add Tag
-        </ContextMenuSubTrigger>
-        <ContextMenuSubContent className="w-48">
-          <ContextMenuItem>Work</ContextMenuItem>
-          <ContextMenuItem>Personal</ContextMenuItem>
-          <ContextMenuItem>Important</ContextMenuItem>
-          <ContextMenuItem>Project</ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem>Create New Tag...</ContextMenuItem>
-        </ContextMenuSubContent>
-      </ContextMenuSub>
-      <ContextMenuSub>
-        <ContextMenuSubTrigger>
-          <Copy className="mr-2 h-4 w-4" />
+          <Folder className="mr-2 h-4 w-4 text-muted-foreground" />
           Move To
         </ContextMenuSubTrigger>
-        <ContextMenuSubContent className="w-48">
+        <ContextMenuSubContent className="w-48 bg-white shadow-lg rounded-md">
           <ContextMenuItem>Documents</ContextMenuItem>
           <ContextMenuItem>Pictures</ContextMenuItem>
           <ContextMenuItem>Downloads</ContextMenuItem>
-          <ContextMenuItem>Projects</ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem>Choose Location...</ContextMenuItem>
         </ContextMenuSubContent>
       </ContextMenuSub>
-      <ContextMenuItem>Copy</ContextMenuItem>
       <ContextMenuSeparator />
       <ContextMenuItem
         className="text-destructive"
         onClick={(e) => {
-          e.stopPropagation()
-          onDelete()
+          e.stopPropagation();
+          onDelete();
         }}
       >
-        <Trash className="mr-2 h-4 w-4" />
+        <Trash className="mr-2 h-4 w-4 text-destructive" />
         Delete
       </ContextMenuItem>
     </ContextMenuContent>
-  )
+  );
 }
 
