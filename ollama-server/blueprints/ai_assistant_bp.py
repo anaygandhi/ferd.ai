@@ -1,6 +1,8 @@
 from flask import Blueprint, jsonify, request, current_app 
 import requests 
 import os 
+import json 
+from utils import extract_json
 
 
 # --- Config --- #
@@ -154,25 +156,127 @@ def generate():
 
     """
 
-    # Extract the prompt from the request body
+    # Extract the json from the request body
     try:
-        # Extract prompt  
-        prompt:str = request.get_json().get("prompt")
+        
+        # Get JSON
+        request_json:dict = request.get_json()
+        print('request_json: ', request_json)
 
-        # Verify prompt is given
-        if not prompt: raise Exception
+        # Extract user_query and document_content  
+        user_query:str = request_json.get("user_query", "")
+        documents_dict:dict = request_json.get('documents', {})
+
+        # Verify the information is given
+        if not all([user_query, documents_dict]): raise Exception
     
     # Handle errors
     except Exception as e: 
-        return jsonify({"error": "No prompt provided"}), 400
+        return jsonify({
+            "error": f"Missing required information (one of 'user_query', 'documents'). Given: {request_json}"
+        }), 400
     
+    print('\033[94mdocuments_dict type:\033[0m ', type(documents_dict))
+    with open('../file_indexing/test-results/documents-dict.json', 'w+') as file:
+        json.dump(documents_dict, file, indent=4)
+
+
     # Submit api req to ollama model
     try:
+        
+        # Format a JSON string to use as an example to pass to the model
+        example_json:str = {
+            filename : {
+                'confidence': '<int, confidence score for this file>',
+                'context': '<1-2 sentences about your reasoning for this file>' 
+            }
+            for filename in list(documents_dict.keys())
+        }
+
+        # Format a prompt
+        formatted_prompt:str = f"""
+            Ignore all previous instructions and do not remember anything after this response. Respond to this prompt as if it's the only thing you've seen.\n
+            \nHere is the query: "{user_query}"\n
+            \nHere are your instructions: I want you to take this query and compare it to all the given files.
+            \nReturn a JSON object with keys for each of the filenames, and the values should be a dictionary containing
+            two keys called "confidence" and "context". The "confidence" should be your confidence that the document 
+            matches the given query in the range 0-100 inclusive, and "context" should be two sentences or less that 
+            describe why you chose that confidence score. In the "context", you can explain your reasoning and/or include 
+            specific references to the given document content, and I want you to quote the query in the "context" too. You 
+            should calculate the confidence relative to the other given documents.
+            \nYour response should look exactly like this, with no additional 
+            characters: {json.dumps(example_json)}\n
+            \nYour confidence should be primarily based on the document content. Additionally, I don't want 
+            any additional information, context, explanation, or characters - just return the JSON object.
+            \n\nHere is the information for all files, where the keys are filenames and values are the content of that
+            file: \n{documents_dict}\n
+        """
+
+
+        with open('test-prompt.txt', 'w+') as file: 
+            file.write(formatted_prompt)
+
+
+        # Make API req to ollama
         res = requests.post(
             f"{current_app.OLLAMA_URL}/api/generate",
             json={
                 "model": current_app.MODEL_ID,
-                "prompt": prompt,
+                "prompt": formatted_prompt,
+                "stream": False,
+                "context": []
+            }
+        )
+
+        # Verify req status
+        res.raise_for_status()
+
+        print('\nres.json(): ', res.json())
+        print()
+
+        print('\nres.json()["response"]: ', res.json()['response'])
+        print()
+
+        # Extract the json from the response's response 
+        ollama_result:dict = extract_json(res.json()['response'])
+
+        # Return the response json 
+        return jsonify(ollama_result)
+    
+    # Handle errors
+    except requests.RequestException as e:
+        return jsonify({"error": f"Request to OLLAMA failed: {str(e)}"}), 500
+    
+
+@ai_bp.route('/summarize-document', methods=['POST']) 
+def summarize_document(): 
+    """Passes the given document content to the ollama model to summarize."""
+
+    # Get the given request body
+    request_json:dict = request.get_json()
+
+    # Extract the document content from the request body
+    document_content:str = request_json.get('document_content', '') 
+
+    # Get the summary max length if provided
+    max_length:int = request_json.get('max_length', 500)
+
+    # Make req to Ollama model
+    try: 
+        
+        # Format a prompt 
+        formatted_prompt:str = f"""
+            Summarize the following text into less than or equal to {max_length} words, returning only the summary and no extra 
+            context, characters, or words: 
+            \n{document_content}
+        """
+
+        # Make API req
+        res = requests.post(
+            f"{current_app.OLLAMA_URL}/api/generate",
+            json={
+                "model": current_app.MODEL_ID,
+                "prompt": formatted_prompt,
                 "stream": False
             }
         )
@@ -180,9 +284,15 @@ def generate():
         # Verify req status
         res.raise_for_status()
 
+        # Extract response JSON
+        response_json:dict = res.json()
+        
+        print('\033[92mOLLAMA RESPONSE: \033[0m', response_json)
+
         # Return the response json 
         return jsonify(res.json())
     
     # Handle errors
     except requests.RequestException as e:
         return jsonify({"error": f"Request to OLLAMA failed: {str(e)}"}), 500
+
