@@ -1,95 +1,64 @@
 import os
-import requests
-from metadata_extraction import extract_metadata
-from text_extraction import search_in_file
-from file_indexer import search_files
 import json
+from tqdm import tqdm
+import faiss 
+import sqlite3 as sql
+from sentence_transformers import SentenceTransformer
 
-OLLAMA_SERVER_URL = 'http://localhost:8321'
-FILE_DIRECTORY = './test_pdfs'
-
-def generate_response(file_name, file_content):
-    """ Sends file content to Ollama's /generate endpoint with the structured query """
-    query = (
-        "Is this document a datasheet?"
-        "Return a JSON response with two keys: "
-        "'file_name' (string) and 'confidence_score' (integer, 1-100 representing your confidence in the fact that this document is a datasheet). "
-        " Don't create a new file_name - just the keep the name that is inputted (the path)"
-        "Don't use the backticks in the JSON response. "
-        "Example: {\"file_name\": \"example.pdf\", \"confidence_score\": 85}"
-    )
-
-    data = {
-        "prompt": f"{query}\n\nDocument content:\n{file_content}",
-    }
-    
-    try:
-        print(f"Sending request for: {file_name}")
-        response = requests.post(f"{OLLAMA_SERVER_URL}/generate", json=data, timeout=120)
-        response.raise_for_status()  
-
-        response_data = response.json()
-        print(f"Ollama response for {file_name}: {response_data['response']}")
-
-        return response_data['response']
-    
-    except requests.Timeout:
-        print(f"Error: Request timed out for '{file_name}'. Trying again with a longer timeout...")
-        return None  
-    except requests.RequestException as e:
-        print(f"Error: Request failed for '{file_name}': {e}")
-        return None
+from utils import send_files_to_ollama, tokenize_no_stopwords, search_files, read_file, extract_metadata
 
 
-def send_files_to_ollama(files):
-    best_match = None
-    highest_score = -float('inf')  
+# --- Config --- #
+OLLAMA_SERVER_URL:str = 'http://localhost:8321'
+INPUT_FILE_DIR:str = '../test_pdfs'
+INDEX_FILE_DIR:str = 'index/'
+EMBEDDING_DIM:int = 384
+K:int = 3
 
-    for file in files:
-        file_path = os.path.join(FILE_DIRECTORY, file)
-        
-        try:
-            # Extract text from PDF, DOCX, or TXT files
-            file_content = search_in_file(file_path)
+# Construct the index bin and metadata db paths
+INDEX_BIN_PATH:str = os.path.join(INDEX_FILE_DIR, 'faiss_index.bin')
+METADATA_DB_PATH:str = os.path.join(INDEX_FILE_DIR, 'file_metadata.db')
 
-            # Extract metadata from the file
-            metadata = extract_metadata(file_path)
-            print(f"Metadata for {file}: {metadata}")
-
-            # Send only the first 200 words of the content
-            words = file_content.split()[:200]
-            first_200_words = ' '.join(words)
-
-            # Generate response by sending first 200 words
-            response_data = generate_response(file, first_200_words)
-
-            if response_data:
-                response_obj = json.loads(response_data)
-                score = response_obj.get("confidence_score", None)
-                
-                if score is None:
-                    print(f"Warning: No confidence score received for '{file}'. Skipping.")
-                    continue
-                
-                print(f"Confidence score for '{file}': {score}")
-                
-                if score > highest_score:
-                    highest_score = score
-                    best_match = file
-                    
-            else:
-                print(f"Failed to get a valid response for {file}. Skipping.")
-                
-        except Exception as e:
-            print(f"Error during processing file '{file}': {e}")
-
-    if best_match:
-        print(f"The best matching file for the query is: '{best_match}' with a confidence score of {highest_score}")
-    else:
-        print("No suitable match found.")
+search_query:str = "sharks"
 
 
-if __name__ == "__main__":
-    search_query = "Find the datasheet"
-    top_files = search_files(search_query)
-    send_files_to_ollama(top_files)
+# --- Setup --- #
+# Load the index
+index:faiss.IndexFlatL2 = faiss.read_index(INDEX_BIN_PATH)
+
+# SQLite connection
+cxn:sql.Connection = sql.connect(METADATA_DB_PATH)
+cursor:sql.Cursor = cxn.cursor()
+
+# Create model
+model:SentenceTransformer = SentenceTransformer('all-MiniLM-L6-v2')  
+
+# Get the filename and content for all files in the input directory
+all_file_info:dict[str, dict] = {
+    filename : read_file(os.path.join(INPUT_FILE_DIR, filename))
+    for filename in tqdm(os.listdir(INPUT_FILE_DIR), total=len(os.listdir(INPUT_FILE_DIR)), desc="Extracting files' content")
+}
+
+
+# --- Search --- #
+# Calculate the top K files 
+top_files:list[str] = search_files(
+    search_query, 
+    model,
+    EMBEDDING_DIM,
+    index,
+    cursor,
+    top_k=K
+)
+
+
+# --- Ollama query --- #
+# Send the top K files to ollama for analysis
+ollama_response:dict = send_files_to_ollama(
+    { filename : ' '.join(tokenize_no_stopwords(all_file_info[filename])) for filename in top_files }, 
+    search_query,
+    OLLAMA_SERVER_URL + '/generate'
+)
+
+# Print results
+print('\033[92mOllama response: \033[0m\n', ollama_response)
