@@ -56,7 +56,7 @@ function createWindow() {
     // In production, load from the built Next.js app
     const url = process.env.NODE_ENV === "development"
         ? "http://localhost:3000"
-        : "http://localhost:3000";
+        : `file://${path.join(__dirname, "../out/index.html")}`;
     mainWindow.loadURL(url);
     // Open DevTools in development
     if (process.env.NODE_ENV === "development") {
@@ -91,7 +91,8 @@ electron_1.ipcMain.handle("list-directory", async (_, dirPath) => {
             let stats;
             try {
                 stats = await fs.promises.stat(filePath);
-            } catch (error) {
+            }
+            catch (error) {
                 // Skip files we can't access
                 return null;
             }
@@ -107,7 +108,8 @@ electron_1.ipcMain.handle("list-directory", async (_, dirPath) => {
         }));
         // Filter out null entries (files we couldn't access)
         return fileList.filter(Boolean);
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error listing directory:", error);
         throw error;
     }
@@ -121,7 +123,8 @@ electron_1.ipcMain.handle("get-file-details", async (_, filePath) => {
             created: stats.birthtime.toISOString(),
             isDirectory: stats.isDirectory(),
         };
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error getting file details:", error);
         throw error;
     }
@@ -130,7 +133,8 @@ electron_1.ipcMain.handle("move-file", async (_, sourcePath, destinationPath) =>
     try {
         await fs.promises.rename(sourcePath, destinationPath);
         return { success: true };
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error moving file:", error);
         throw error;
     }
@@ -139,7 +143,8 @@ electron_1.ipcMain.handle("copy-file", async (_, sourcePath, destinationPath) =>
     try {
         await fs.promises.copyFile(sourcePath, destinationPath);
         return { success: true };
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error copying file:", error);
         throw error;
     }
@@ -149,11 +154,13 @@ electron_1.ipcMain.handle("delete-file", async (_, filePath) => {
         const stats = await fs.promises.stat(filePath);
         if (stats.isDirectory()) {
             await fs.promises.rmdir(filePath, { recursive: true });
-        } else {
+        }
+        else {
             await fs.promises.unlink(filePath);
         }
         return { success: true };
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error deleting file:", error);
         throw error;
     }
@@ -162,7 +169,8 @@ electron_1.ipcMain.handle("create-directory", async (_, dirPath) => {
     try {
         await fs.promises.mkdir(dirPath, { recursive: true });
         return { success: true };
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error creating directory:", error);
         throw error;
     }
@@ -171,7 +179,8 @@ electron_1.ipcMain.handle("read-file", async (_, filePath) => {
     try {
         const content = await fs.promises.readFile(filePath, "utf8");
         return content;
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error reading file:", error);
         throw error;
     }
@@ -180,7 +189,8 @@ electron_1.ipcMain.handle("write-file", async (_, filePath, content) => {
     try {
         await fs.promises.writeFile(filePath, content, "utf8");
         return { success: true };
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Error writing file:", error);
         throw error;
     }
@@ -213,19 +223,4 @@ electron_1.ipcMain.handle("save-file-dialog", async (_, options = {}) => {
     if (result.canceled)
         return null;
     return result.filePath;
-});
-electron_1.ipcMain.handle("get-root-directories", async () => {
-    try {
-        // Get root directories based on the platform
-        const rootDirectories =
-            process.platform === "win32"
-                ? ["C:\\", "D:\\"] // Example for Windows
-                : ["/"]; // Root directory for macOS/Linux
-
-        console.log("Root directories fetched in main process:", rootDirectories);
-        return { success: true, directories: rootDirectories };
-    } catch (err) {
-        console.error("Error fetching root directories in main process:", err);
-        return { success: false, error: err.message };
-    }
 });

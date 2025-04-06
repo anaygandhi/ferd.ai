@@ -1,4 +1,13 @@
 import { contextBridge, ipcRenderer } from "electron"
+import { ElectronAPI } from "../lib/electron-api"; // Adjust the path if necessary
+
+declare global {
+  interface Window {
+    electronAPI?: ElectronAPI;
+  }
+}
+
+console.log("Preload script loaded. Exposing electronAPI.");
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
@@ -22,5 +31,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // App info
   platform: process.platform,
-})
+  getRootDirectories: () => {
+    console.log("Invoking get-root-directories from renderer process");
+    return ipcRenderer.invoke("get-root-directories").then((response) => {
+      console.log("Response from get-root-directories:", response);
+      return response;
+    });
+  },
+});
 

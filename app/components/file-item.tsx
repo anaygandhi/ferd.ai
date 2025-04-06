@@ -52,7 +52,17 @@ interface FileItemProps {
 }
 
 export function FileItem({ file, viewMode, onOpen, onDelete, onSelect, isSelected }: FileItemProps) {
-  const [isHovered, setIsHovered] = useState(false)
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleFileClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering parent events
+    onOpen(); // Trigger the onOpen handler
+  };
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation(); // Prevent triggering parent events
+    onSelect(e.target.checked); // Trigger the onSelect handler
+  };
 
   const getFileIcon = () => {
     if (file.isDirectory) {
@@ -136,21 +146,20 @@ export function FileItem({ file, viewMode, onOpen, onDelete, onSelect, isSelecte
           className={`group flex cursor-pointer flex-col items-center rounded-lg p-2 transition-colors ${
             isSelected ? "bg-primary/10" : "hover:bg-muted"
           }`}
-          onClick={() => onSelect(!isSelected)}
-          onDoubleClick={onOpen}
+          onClick={handleFileClick} // Trigger onOpen on click
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
           <div className="relative mb-2 flex h-24 w-24 items-center justify-center rounded-md border bg-background p-2">
             {getFileIcon()}
             {(isSelected || isHovered) && (
-              <div className="absolute top-1 left-1">
+                <div className="absolute top-1 left-1">
                 <Checkbox
                   checked={isSelected}
-                  onCheckedChange={(checked) => onSelect(!!checked)}
-                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => handleCheckboxChange(e as React.ChangeEvent<HTMLInputElement>)} // Trigger onSelect on checkbox change
+                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()} // Prevent checkbox click from triggering onOpen
                 />
-              </div>
+                </div>
             )}
           </div>
           <div className="w-full text-center">
@@ -161,7 +170,7 @@ export function FileItem({ file, viewMode, onOpen, onDelete, onSelect, isSelecte
       </ContextMenuTrigger>
       <FileContextMenu file={file} onOpen={onOpen} onDelete={onDelete} />
     </ContextMenu>
-  )
+  );
 
   const renderListItem = () => (
     <ContextMenu>
@@ -170,16 +179,15 @@ export function FileItem({ file, viewMode, onOpen, onDelete, onSelect, isSelecte
           className={`group flex cursor-pointer items-center justify-between px-4 py-2 transition-colors ${
             isSelected ? "bg-primary/10" : "hover:bg-muted"
           }`}
-          onClick={() => onSelect(!isSelected)}
-          onDoubleClick={onOpen}
+          onClick={handleFileClick} // Trigger onOpen on click
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
           <div className="flex items-center gap-3">
             <Checkbox
               checked={isSelected}
-              onCheckedChange={(checked) => onSelect(!!checked)}
-              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => handleCheckboxChange(e as React.ChangeEvent<HTMLInputElement>)} // Trigger onSelect on checkbox change
+              onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()} // Prevent checkbox click from triggering onOpen
             />
             {getFileIcon()}
             <div>
@@ -218,8 +226,8 @@ export function FileItem({ file, viewMode, onOpen, onDelete, onSelect, isSelecte
                 <DropdownMenuItem
                   className="text-destructive"
                   onClick={(e) => {
-                    e.stopPropagation()
-                    onDelete()
+                    e.stopPropagation();
+                    onDelete();
                   }}
                 >
                   Delete
@@ -231,9 +239,9 @@ export function FileItem({ file, viewMode, onOpen, onDelete, onSelect, isSelecte
       </ContextMenuTrigger>
       <FileContextMenu file={file} onOpen={onOpen} onDelete={onDelete} />
     </ContextMenu>
-  )
+  );
 
-  return viewMode === "grid" ? renderGridItem() : renderListItem()
+  return viewMode === "grid" ? renderGridItem() : renderListItem();
 }
 
 interface FileContextMenuProps {

@@ -13,28 +13,37 @@ interface FolderTreeProps {
 }
 
 export function FolderTree({ onSelectFolder, currentPath }: FolderTreeProps) {
-  const [rootItems, setRootItems] = useState<FileInfo[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [rootItems, setRootItems] = useState<FileInfo[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const electronAPI = getElectronAPI()
+  const electronAPI = getElectronAPI();
 
   useEffect(() => {
-    console.log("FolderTree useEffect triggered. Running in browser environment.");
+    console.log("FolderTree useEffect triggered. Fetching root directories...");
     const loadRootItems = async () => {
       try {
-        console.log("Opening directory picker...");
-        const files = await electronAPI.listDirectory("/");
-        console.log("Files in selected directory:", files);
+        const result = await electronAPI.getRootDirectories();
+        console.log("Root directories result:", result);
 
-        if (!files || files.length === 0) {
-          console.warn("No files returned from listDirectory");
+        if (!result || !result.success) {
+          console.warn("Failed to fetch root directories:", result?.error);
           setRootItems([]); // Explicitly set empty state
           return;
         }
 
-        setRootItems(files); // Include both directories and files
+        const rootDirectories = (result.directories || []).map((dir) => ({
+          name: dir,
+          path: dir,
+          isDirectory: true,
+          size: 0,
+          modified: "",
+          created: "",
+          type: "directory",
+        }));
+
+        setRootItems(rootDirectories);
       } catch (error) {
-        console.error("Error loading root items:", error);
+        console.error("Error fetching root directories:", error);
       } finally {
         setIsLoading(false);
       }
@@ -48,7 +57,7 @@ export function FolderTree({ onSelectFolder, currentPath }: FolderTreeProps) {
       <div className="flex items-center justify-center p-4">
         <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
       </div>
-    )
+    );
   }
 
   if (rootItems.length === 0) {
@@ -56,7 +65,7 @@ export function FolderTree({ onSelectFolder, currentPath }: FolderTreeProps) {
       <div className="flex items-center justify-center p-4 text-sm text-muted-foreground">
         Unable to load items. Please check your permissions or try again.
       </div>
-    )
+    );
   }
 
   return (
@@ -71,7 +80,7 @@ export function FolderTree({ onSelectFolder, currentPath }: FolderTreeProps) {
         />
       ))}
     </div>
-  )
+  );
 }
 
 interface FolderItemProps {
@@ -82,55 +91,45 @@ interface FolderItemProps {
 }
 
 function FolderItem({ item, level, onSelectFolder, currentPath }: FolderItemProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [subItems, setSubItems] = useState<FileInfo[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [hasLoaded, setHasLoaded] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
+  const [subItems, setSubItems] = useState<FileInfo[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
-  const electronAPI = getElectronAPI()
-
-  // Check if this folder is in the current path
-  const isInCurrentPath = currentPath.startsWith(item.path)
-
-  // Auto-expand if this folder is in the current path
-  useEffect(() => {
-    if (isInCurrentPath && !isOpen && !hasLoaded) {
-      setIsOpen(true)
-    }
-  }, [isInCurrentPath, isOpen, hasLoaded])
+  const electronAPI = getElectronAPI();
 
   // Load sub-items (directories and files) when expanded
   useEffect(() => {
     if (item.isDirectory && isOpen && !hasLoaded) {
       const loadSubItems = async () => {
-        setIsLoading(true)
+        setIsLoading(true);
         try {
-          const files = await electronAPI.listDirectory(item.path)
-          console.log(`Loaded sub-items for ${item.path}:`, files) // Debugging log
-          setSubItems(files) // Include both directories and files
-          setHasLoaded(true)
+          const files = await electronAPI.listDirectory(item.path);
+          console.log(`Loaded sub-items for ${item.path}:`, files); // Debugging log
+          setSubItems(files); // Include both directories and files
+          setHasLoaded(true);
         } catch (error) {
-          console.error(`Error loading sub-items for ${item.path}:`, error)
+          console.error(`Error loading sub-items for ${item.path}:`, error);
           toast({
             title: "Error loading folder",
             description: "Unable to access this folder. It may be restricted or protected.",
             variant: "destructive",
-          })
+          });
         } finally {
-          setIsLoading(false)
+          setIsLoading(false);
         }
-      }
+      };
 
-      loadSubItems()
+      loadSubItems();
     }
-  }, [isOpen, hasLoaded, item.path, electronAPI])
+  }, [isOpen, hasLoaded, item.path, electronAPI]);
 
   const handleClick = () => {
     if (item.isDirectory) {
-      setIsOpen(!isOpen)
-      onSelectFolder(item.path)
+      setIsOpen(!isOpen);
+      onSelectFolder(item.path); // Update the current path
     }
-  }
+  };
 
   return (
     <div>
@@ -138,7 +137,7 @@ function FolderItem({ item, level, onSelectFolder, currentPath }: FolderItemProp
         className={cn(
           "flex w-full items-center rounded-md px-2 py-1 text-left text-sm",
           currentPath === item.path ? "bg-primary/10 font-medium" : "hover:bg-muted",
-          level === 0 && "font-medium",
+          level === 0 && "font-medium"
         )}
         style={{ paddingLeft: `${level * 12 + 8}px` }}
         onClick={handleClick}
@@ -191,6 +190,6 @@ function FolderItem({ item, level, onSelectFolder, currentPath }: FolderItemProp
         </div>
       )}
     </div>
-  )
+  );
 }
 

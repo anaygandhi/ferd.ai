@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useEffect, useState } from "react";
 import {
   ChevronRight,
   FileText,
@@ -67,8 +67,62 @@ export function FileExplorer() {
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false)
   const [newFolderName, setNewFolderName] = useState("")
   const [selectedFiles, setSelectedFiles] = useState<string[]>([])
+  const [rootDirectories, setRootDirectories] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const electronAPI: ElectronAPI | undefined = getElectronAPI()
+
+  useEffect(() => {
+    const fetchRootDirectories = async () => {
+      try {
+        console.log("Fetching root directories... WORK PLEASE");
+        const result = await window.electronAPI?.getRootDirectories();
+        console.log("Root directories result:", result);
+
+        if (!result) {
+          setError("Electron API is not available.");
+          return;
+        }
+        if (result.success) {
+          console.log("Root directories fetched successfully:", result.directories);
+          setRootDirectories(result.directories || []);
+        } else {
+          console.error("Error fetching root directories:", result.error);
+          setError(result.error || "Unable to load items. Please check your permissions or try again. HI");
+        }
+      } catch (err) {
+        console.error("Unexpected error fetching root directories:", err);
+        setError("Unable to load items. Please check your permissions or try again. HEY");
+      }
+    };
+
+    fetchRootDirectories();
+  }, []);
+
+  useEffect(() => {
+    const fetchFiles = async () => {
+      if (!isRunningInElectron() || !electronAPI) return;
+
+      setIsLoading(true);
+      try {
+        console.log("Fetching files for path:", currentPath); // Debugging log
+        const files = await electronAPI.listDirectory(currentPath);
+        console.log("Files fetched:", files); // Debugging log
+        setFiles(files);
+      } catch (error) {
+        console.error("Error fetching files:", error);
+        toast({
+          title: "Error",
+          description: "Unable to load directory contents.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFiles();
+  }, [currentPath, electronAPI]);
 
   const handleSelectDirectory = async () => {
     try {
@@ -109,16 +163,15 @@ export function FileExplorer() {
 
   const handleFileOpen = (file: FileInfo) => {
     if (file.isDirectory) {
-      navigateToPath(file.path)
+      console.log("Navigating to directory PLEASE NAVIGATE:", file.path); // Debugging log
+      setCurrentPath(file.path); // Update the current path
     } else {
       toast({
         title: "File selected",
         description: `${file.name} (${formatFileSize(file.size)})`,
-      })
+      });
     }
-
-    if (!isRunningInElectron() || !electronAPI) return;
-  }
+  };
 
   const handleFileDelete = async (filePath: string) => {
     if (!isRunningInElectron() || !electronAPI) return
@@ -277,9 +330,19 @@ export function FileExplorer() {
 
         <div className="flex-1 overflow-auto">
           <h3 className="mb-2 px-2 text-sm font-medium">Folders</h3>
-          <ScrollArea className="h-[calc(100vh-280px)]">
-            <FolderTree onSelectFolder={navigateToPath} currentPath={currentPath} />
-          </ScrollArea>
+          {error ? (
+            <p className="text-red-500 px-2">{error}</p>
+          ) : (
+            <ScrollArea className="h-[calc(100vh-280px)]">
+              <ul>
+                {rootDirectories.map((dir) => (
+                  <li key={dir} className="mb-2 px-2">
+                    📁 {dir}
+                  </li>
+                ))}
+              </ul>
+            </ScrollArea>
+          )}
         </div>
 
         <Separator className="my-2" />

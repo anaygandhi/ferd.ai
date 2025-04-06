@@ -5,6 +5,7 @@ export interface ElectronAPI {
   deleteFile: (filePath: string) => Promise<void>;
   platform: "win32" | "darwin" | "linux" | "browser";
   getDownloadsPath: () => Promise<string>;
+  getRootDirectories: () => Promise<{ success: boolean; directories?: string[]; error?: string }>; // Add this
 }
 
 declare global {
@@ -78,6 +79,13 @@ const browserElectronAPI: ElectronAPI = {
   getDownloadsPath: async () => {
     console.log("Getting Downloads path");
     return "/downloads";
+  },
+  getRootDirectories: async () => {
+    console.log("Getting root directories (browser environment)");
+    return {
+      success: true,
+      directories: ["/Downloads"], // Simulated Downloads directory
+    };
   },
 };
 
