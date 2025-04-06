@@ -19,14 +19,19 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
       role: "assistant",
       content: "Hello! I'm your AI file assistant. How can I help you organize or find your files today?",
     },
-  ])
-  const [input, setInput] = useState("")
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false); // Add loading state
 
   const handleSend = async () => {
     if (!input.trim()) return;
 
     // Add user message
-    setMessages([...messages, { role: "user", content: input }]);
+    setMessages((prev) => [...prev, { role: "user", content: input }]);
+
+    // Clear the input box and set loading state
+    setInput("");
+    setLoading(true);
 
     try {
       // Append the current path to the prompt
@@ -54,6 +59,7 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
       const data = await response.json();
       const aiResponse = data.response || "Sorry, I couldn't process your request.";
 
+      // Add assistant's response
       setMessages((prev) => [...prev, { role: "assistant", content: aiResponse }]);
     } catch (error) {
       console.error("Error fetching AI response:", error);
@@ -61,10 +67,10 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
         ...prev,
         { role: "assistant", content: "An error occurred while fetching the response. Please try again later." },
       ]);
+    } finally {
+      setLoading(false); // Reset loading state
     }
-
-    setInput("");
-  }
+  };
 
   return (
     <div className="w-80 border-l bg-background">
@@ -92,6 +98,14 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
                   </div>
                 </div>
               ))}
+              {loading && (
+                <div className="flex justify-start">
+                  <div className="rounded-lg px-3 py-2 text-sm bg-muted text-foreground max-w-[90%] flex items-center gap-2">
+                    <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                    Reasoning...
+                  </div>
+                </div>
+              )}
             </div>
           </ScrollArea>
         </CardContent>
@@ -103,14 +117,15 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               className="flex-1"
+              disabled={loading} // Disable input while loading
             />
-            <Button size="icon" onClick={handleSend}>
+            <Button size="icon" onClick={handleSend} disabled={loading}>
               <Send className="h-4 w-4" />
             </Button>
           </div>
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }
 
