@@ -1,9 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronRight, FileText, Folder, FolderOpen } from "lucide-react"
-import path from "path-browserify"
-import { cn } from "@/lib/utils"
+import { ChevronRight, Folder, FolderOpen } from "lucide-react"
 import { getElectronAPI, type FileInfo } from "@/lib/electron-api"
 import { toast } from "@/components/ui/use-toast"
 
@@ -19,15 +17,12 @@ export function FolderTree({ onSelectFolder, currentPath }: FolderTreeProps) {
   const electronAPI = getElectronAPI();
 
   useEffect(() => {
-    console.log("FolderTree useEffect triggered. Fetching root directories...");
     const loadRootItems = async () => {
       try {
         const result = await electronAPI.getRootDirectories();
-        console.log("Root directories result:", result);
-
         if (!result || !result.success) {
           console.warn("Failed to fetch root directories:", result?.error);
-          setRootItems([]); // Explicitly set empty state
+          setRootItems([]);
           return;
         }
 
@@ -98,15 +93,14 @@ function FolderItem({ item, level, onSelectFolder, currentPath }: FolderItemProp
 
   const electronAPI = getElectronAPI();
 
-  // Load sub-items (directories and files) when expanded
   useEffect(() => {
     if (item.isDirectory && isOpen && !hasLoaded) {
       const loadSubItems = async () => {
         setIsLoading(true);
         try {
           const files = await electronAPI.listDirectory(item.path);
-          console.log(`Loaded sub-items for ${item.path}:`, files); // Debugging log
-          setSubItems(files); // Include both directories and files
+          const directories = files.filter((file) => file.isDirectory); // Only include directories
+          setSubItems(directories);
           setHasLoaded(true);
         } catch (error) {
           console.error(`Error loading sub-items for ${item.path}:`, error);
@@ -134,18 +128,18 @@ function FolderItem({ item, level, onSelectFolder, currentPath }: FolderItemProp
   return (
     <div>
       <button
-        className={cn(
-          "flex w-full items-center rounded-md px-2 py-1 text-left text-sm",
-          currentPath === item.path ? "bg-primary/10 font-medium" : "hover:bg-muted",
-          level === 0 && "font-medium"
-        )}
+        className={`flex w-full items-center rounded-md px-2 py-1 text-left text-sm ${
+          currentPath === item.path ? "bg-primary/10 font-medium" : "hover:bg-muted"
+        }`}
         style={{ paddingLeft: `${level * 12 + 8}px` }}
         onClick={handleClick}
       >
         {item.isDirectory ? (
           <>
             <ChevronRight
-              className={cn("mr-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform", isOpen && "rotate-90")}
+              className={`mr-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
+                isOpen ? "rotate-90" : ""
+              }`}
             />
             {isOpen ? (
               <FolderOpen className="mr-2 h-4 w-4 text-orange-400" />
@@ -153,9 +147,7 @@ function FolderItem({ item, level, onSelectFolder, currentPath }: FolderItemProp
               <Folder className="mr-2 h-4 w-4 text-blue-400" />
             )}
           </>
-        ) : (
-          <FileText className="mr-2 h-4 w-4 text-muted-foreground" />
-        )}
+        ) : null}
         {item.name}
       </button>
 

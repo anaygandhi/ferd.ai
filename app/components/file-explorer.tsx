@@ -334,13 +334,7 @@ export function FileExplorer() {
             <p className="text-red-500 px-2">{error}</p>
           ) : (
             <ScrollArea className="h-[calc(100vh-280px)]">
-              <ul>
-                {rootDirectories.map((dir) => (
-                  <li key={dir} className="mb-2 px-2">
-                    📁 {dir}
-                  </li>
-                ))}
-              </ul>
+              <FolderTree onSelectFolder={navigateToPath} currentPath={currentPath} />
             </ScrollArea>
           )}
         </div>
