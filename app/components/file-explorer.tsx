@@ -647,7 +647,13 @@ export function FileExplorer() {
       </div>
 
       {/* AI Assistant Sidebar */}
-      {showAIAssistant && <AIAssistant onClose={() => setShowAIAssistant(false)} />}
+      {showAIAssistant && (
+        <AIAssistant
+          currentPath={currentPath}
+          selectedFiles={selectedFiles}
+          onClose={() => setShowAIAssistant(false)}
+        />
+      )}
 
       {/* New Folder Dialog */}
       <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>

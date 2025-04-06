@@ -8,10 +8,12 @@ import { Input } from "./ui/input"
 import { ScrollArea } from "./ui/scroll-area"
 
 interface AIAssistantProps {
-  onClose: () => void
+  onClose: () => void;
+  currentPath: string;
+  selectedFiles: string[];
 }
 
-export function AIAssistant({ onClose }: AIAssistantProps) {
+export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistantProps) {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
@@ -27,6 +29,10 @@ export function AIAssistant({ onClose }: AIAssistantProps) {
     setMessages([...messages, { role: "user", content: input }]);
 
     try {
+      // Append the current path to the prompt
+      const fullPrompt = `This is the current path I am, so related any path related queries 
+      to this: ${currentPath}\n\n${input}`;
+
       const response = await fetch("http://localhost:8321/ai-assistant", {
         method: "POST",
         headers: {
@@ -34,7 +40,10 @@ export function AIAssistant({ onClose }: AIAssistantProps) {
         },
         body: JSON.stringify({
           action: "generate",
-          params: { prompt: input },
+          params: { 
+            prompt: fullPrompt, 
+            selectedFiles, 
+          },
         }),
       });
 
@@ -47,7 +56,7 @@ export function AIAssistant({ onClose }: AIAssistantProps) {
 
       setMessages((prev) => [...prev, { role: "assistant", content: aiResponse }]);
     } catch (error) {
-      console.error("Error fetching AI response:", error); // Log the error for debugging
+      console.error("Error fetching AI response:", error);
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: "An error occurred while fetching the response. Please try again later." },
