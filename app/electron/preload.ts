@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   createDirectory: (dirPath: string) => ipcRenderer.invoke("create-directory", dirPath),
   readFile: (filePath: string) => ipcRenderer.invoke("read-file", filePath),
   writeFile: (filePath: string, content: string) => ipcRenderer.invoke("write-file", filePath, content),
+  getRecycleBin: () => ipcRenderer.invoke("get-recycle-bin"),
 
   // Dialog operations
   selectDirectory: () => ipcRenderer.invoke("select-directory"),

@@ -20,6 +20,7 @@ electron_1.contextBridge.exposeInMainWorld("electronAPI", {
     selectDirectory: () => electron_1.ipcRenderer.invoke("select-directory"),
     selectFile: (options) => electron_1.ipcRenderer.invoke("select-file", options),
     saveFileDialog: (options) => electron_1.ipcRenderer.invoke("save-file-dialog", options),
+    getRecycleBin: () => electron_1.ipcRenderer.invoke("get-recycle-bin"),
     // App info
     platform: process.platform,
     getRootDirectories: () => {

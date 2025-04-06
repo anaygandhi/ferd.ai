@@ -5,7 +5,8 @@ export interface ElectronAPI {
   deleteFile: (filePath: string) => Promise<void>;
   platform: "win32" | "darwin" | "linux" | "browser";
   getDownloadsPath: () => Promise<string>;
-  getRootDirectories: () => Promise<{ success: boolean; directories?: string[]; error?: string }>; // Add this
+  getRootDirectories: () => Promise<{ success: boolean; directories?: string[]; error?: string }>;
+  getRecycleBin: () => Promise<{ success: boolean; files?: FileInfo[]; error?: string }>;
 }
 
 declare global {
@@ -85,6 +86,13 @@ const browserElectronAPI: ElectronAPI = {
     return {
       success: true,
       directories: ["/Downloads"], // Simulated Downloads directory
+    };
+  },
+  getRecycleBin: async () => {
+    console.log("Getting recycle bin (browser environment)");
+    return {
+      success: true,
+      files: [],
     };
   },
 };

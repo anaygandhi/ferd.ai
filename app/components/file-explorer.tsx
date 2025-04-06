@@ -57,6 +57,20 @@ function isRunningInElectron(): boolean {
   return typeof window !== "undefined" && window.navigator.userAgent.toLowerCase().includes("electron");
 }
 
+const fileTypeFilters = {
+  documents: [".doc", ".docx", ".txt", ".rtf", ".pdf"],
+  images: [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg", ".webp"],
+  videos: [".mp4", ".mov", ".avi", ".mkv", ".webm"],
+  audio: [".mp3", ".wav", ".ogg", ".flac", ".aac"],
+};
+
+const filterFilesByType = (files: FileInfo[], type: keyof typeof fileTypeFilters) => {
+  return files.filter((file) => {
+    const extension = path.extname(file.name).toLowerCase();
+    return fileTypeFilters[type].includes(extension);
+  });
+};
+
 export function FileExplorer() {
   const [searchQuery, setSearchQuery] = useState("")
   const [showAIAssistant, setShowAIAssistant] = useState(false)
@@ -69,6 +83,7 @@ export function FileExplorer() {
   const [selectedFiles, setSelectedFiles] = useState<string[]>([])
   const [rootDirectories, setRootDirectories] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [recycleBinFiles, setRecycleBinFiles] = useState<FileInfo[]>([]);
 
   const electronAPI: ElectronAPI | undefined = getElectronAPI()
 
@@ -124,6 +139,30 @@ export function FileExplorer() {
     fetchFiles();
   }, [currentPath, electronAPI]);
 
+  const fetchRecycleBin = async () => {
+    if (!isRunningInElectron() || !electronAPI) return;
+
+    try {
+      const result = await electronAPI.getRecycleBin();
+      if (result.success) {
+        setRecycleBinFiles(result.files || []);
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Unable to load recycle bin contents.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching recycle bin contents:", error);
+      toast({
+        title: "Error",
+        description: "Unable to load recycle bin contents.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSelectDirectory = async () => {
     try {
       console.log("Opening directory picker...");
@@ -175,7 +214,7 @@ export function FileExplorer() {
 
   const handleFileDelete = async (filePath: string) => {
     if (!isRunningInElectron() || !electronAPI) return
-
+    if (!window.confirm(`Are you sure you want to delete ${path.basename(filePath)}?`)) return
     try {
       await electronAPI.deleteFile(filePath)
       // Refresh the current directory
@@ -342,7 +381,11 @@ export function FileExplorer() {
         <Separator className="my-2" />
 
         <div className="space-y-1 py-2">
-          <Button variant="ghost" className="w-full justify-start">
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={fetchRecycleBin} // Fetch recycle bin contents
+          >
             <Trash className="mr-2 h-4 w-4" />
             Trash
           </Button>
@@ -501,54 +544,104 @@ export function FileExplorer() {
                       file={file}
                       viewMode={viewMode}
                       onOpen={() => handleFileOpen(file)}
-                      onDelete={() => console.log("Delete functionality not supported in browser")}
-                      onSelect={(isSelected) => console.log("Selection functionality not supported in browser")}
+                      onDelete={() => handleFileDelete(file.path)}
+                      onSelect={(isSelected) => handleFileSelection(file.path, isSelected)}
                       isSelected={selectedFiles.includes(file.path)}
                     />
                   ))}
                 </div>
               )}
+              {recycleBinFiles.length > 0 && (
+                <div className="p-4">
+                  <h3 className="text-lg font-medium">Recycle Bin</h3>
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                    {recycleBinFiles.map((file) => (
+                      <FileItem
+                        key={file.path}
+                        file={file}
+                        viewMode="grid"
+                        onOpen={() => console.log("Open not supported for recycle bin items")}
+                        onDelete={() => console.log("Delete not supported for recycle bin items")}
+                        onSelect={() => {}}
+                        isSelected={false}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="documents" className="flex-1 p-4 data-[state=active]:flex">
-            <Card className="flex h-full items-center justify-center p-6">
-              <div className="text-center">
-                <FileText className="mx-auto h-10 w-10 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-medium">Documents View</h3>
-                <p className="mt-2 text-sm text-muted-foreground">This tab would show only document files.</p>
+          <TabsContent value="documents" className="flex-1 p-0 data-[state=active]:flex">
+            <ScrollArea className="h-[calc(100vh-160px)]">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 p-4">
+                {filterFilesByType(files, "documents").map((file) => (
+                  <FileItem
+                    key={file.path}
+                    file={file}
+                    viewMode={viewMode}
+                    onOpen={() => handleFileOpen(file)}
+                    onDelete={() => handleFileDelete(file.path)}
+                    onSelect={(isSelected) => handleFileSelection(file.path, isSelected)}
+                    isSelected={selectedFiles.includes(file.path)}
+                  />
+                ))}
               </div>
-            </Card>
+            </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="images" className="flex-1 p-4 data-[state=active]:flex">
-            <Card className="flex h-full items-center justify-center p-6">
-              <div className="text-center">
-                <Image className="mx-auto h-10 w-10 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-medium">Images View</h3>
-                <p className="mt-2 text-sm text-muted-foreground">This tab would show only image files.</p>
+          <TabsContent value="images" className="flex-1 p-0 data-[state=active]:flex">
+            <ScrollArea className="h-[calc(100vh-160px)]">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 p-4">
+                {filterFilesByType(files, "images").map((file) => (
+                  <FileItem
+                    key={file.path}
+                    file={file}
+                    viewMode={viewMode}
+                    onOpen={() => handleFileOpen(file)}
+                    onDelete={() => handleFileDelete(file.path)}
+                    onSelect={(isSelected) => handleFileSelection(file.path, isSelected)}
+                    isSelected={selectedFiles.includes(file.path)}
+                  />
+                ))}
               </div>
-            </Card>
+            </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="videos" className="flex-1 p-4 data-[state=active]:flex">
-            <Card className="flex h-full items-center justify-center p-6">
-              <div className="text-center">
-                <Video className="mx-auto h-10 w-10 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-medium">Videos View</h3>
-                <p className="mt-2 text-sm text-muted-foreground">This tab would show only video files.</p>
+          <TabsContent value="videos" className="flex-1 p-0 data-[state=active]:flex">
+            <ScrollArea className="h-[calc(100vh-160px)]">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 p-4">
+                {filterFilesByType(files, "videos").map((file) => (
+                  <FileItem
+                    key={file.path}
+                    file={file}
+                    viewMode={viewMode}
+                    onOpen={() => handleFileOpen(file)}
+                    onDelete={() => handleFileDelete(file.path)}
+                    onSelect={(isSelected) => handleFileSelection(file.path, isSelected)}
+                    isSelected={selectedFiles.includes(file.path)}
+                  />
+                ))}
               </div>
-            </Card>
+            </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="audio" className="flex-1 p-4 data-[state=active]:flex">
-            <Card className="flex h-full items-center justify-center p-6">
-              <div className="text-center">
-                <Music className="mx-auto h-10 w-10 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-medium">Audio View</h3>
-                <p className="mt-2 text-sm text-muted-foreground">This tab would show only audio files.</p>
+          <TabsContent value="audio" className="flex-1 p-0 data-[state=active]:flex">
+            <ScrollArea className="h-[calc(100vh-160px)]">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 p-4">
+                {filterFilesByType(files, "audio").map((file) => (
+                  <FileItem
+                    key={file.path}
+                    file={file}
+                    viewMode={viewMode}
+                    onOpen={() => handleFileOpen(file)}
+                    onDelete={() => handleFileDelete(file.path)}
+                    onSelect={(isSelected) => handleFileSelection(file.path, isSelected)}
+                    isSelected={selectedFiles.includes(file.path)}
+                  />
+                ))}
               </div>
-            </Card>
+            </ScrollArea>
           </TabsContent>
         </Tabs>
       </div>

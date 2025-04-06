@@ -229,3 +229,25 @@ electron_1.ipcMain.handle("get-root-directories", async () => {
         return { success: false, error: err.message };
     }
 });
+electron_1.ipcMain.handle("get-recycle-bin", async () => {
+  try {
+    console.log("get-recycle-bin handler invoked");
+    const trashPath =
+      process.platform === "win32"
+        ? "C:\\$Recycle.Bin" // Windows Recycle Bin (requires special handling)
+        : path.join(os.homedir(), ".Trash"); // macOS/Linux Trash folder
+
+    const files = await fs.promises.readdir(trashPath, { withFileTypes: true });
+    const fileList = files.map((file) => ({
+      name: file.name,
+      path: path.join(trashPath, file.name),
+      isDirectory: file.isDirectory(),
+    }));
+
+    console.log("Recycle bin contents:", fileList);
+    return { success: true, files: fileList };
+  } catch (error) {
+    console.error("Error fetching recycle bin contents:", error);
+    return { success: false, error: error.message };
+  }
+});
