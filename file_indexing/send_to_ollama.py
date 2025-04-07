@@ -5,7 +5,7 @@ import faiss
 import sqlite3 as sql
 from sentence_transformers import SentenceTransformer
 
-from utils import send_files_to_ollama, tokenize_no_stopwords, search_files, read_file, extract_metadata
+from utils import send_files_to_ollama, tokenize_no_stopwords, search_files, read_file
 
 
 # --- Config --- #
