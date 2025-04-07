@@ -5,6 +5,17 @@ import faiss
 import sqlite3 as sql
 from sentence_transformers import SentenceTransformer
 
+# Modify sys path for util imports 
+import sys
+import os
+
+parent_dir:str = os.path.abspath(os.path.join(os.path.dirname(__file__), '../ollama-server'))
+
+print(parent_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+    
+# Util imports 
 from utils import send_files_to_ollama, tokenize_no_stopwords, search_files, read_file
 
 
