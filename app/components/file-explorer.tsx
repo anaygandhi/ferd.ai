@@ -15,7 +15,7 @@ import {
   Music,
   Plus,
   Search,
-  Settings,
+  Settings as LucideSettings,
   Sparkles,
   Star,
   Tag,
@@ -52,6 +52,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { toast } from "@/components/ui/use-toast"
+import { Settings } from "./settings"; // Import the Settings component
 
 function isRunningInElectron(): boolean {
   return typeof window !== "undefined" && window.navigator.userAgent.toLowerCase().includes("electron");
@@ -84,6 +85,7 @@ export function FileExplorer() {
   const [rootDirectories, setRootDirectories] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [recycleBinFiles, setRecycleBinFiles] = useState<FileInfo[]>([]);
+  const [showSettings, setShowSettings] = useState(false); // Track if settings page is open
 
   const electronAPI: ElectronAPI | undefined = getElectronAPI()
 
@@ -322,6 +324,10 @@ export function FileExplorer() {
     )
   }
 
+  if (showSettings) {
+    return <Settings onClose={() => setShowSettings(false)} />;
+  }
+
   return (
     <div className="flex h-screen w-full overflow-hidden">
       {/* Sidebar */}
@@ -389,8 +395,12 @@ export function FileExplorer() {
             <Trash className="mr-2 h-4 w-4" />
             Trash
           </Button>
-          <Button variant="ghost" className="w-full justify-start">
-            <Settings className="mr-2 h-4 w-4" />
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => setShowSettings(true)} // Open settings page
+          >
+            <LucideSettings className="mr-2 h-4 w-4" />
             Settings
           </Button>
         </div>
