@@ -10,3 +10,4 @@ test_dir/*
 *.db
 *.bin
 *__pycache__*
+venv/
