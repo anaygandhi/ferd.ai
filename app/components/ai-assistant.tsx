@@ -56,7 +56,6 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
           action: "generate",
           params: { 
             prompt: fullPrompt, 
-            selectedFiles, 
           },
         }),
       });
