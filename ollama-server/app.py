@@ -19,10 +19,10 @@ config.read('config/config.conf')
 # Add the config vars to the app so they can be accessed in the blueprints
 app.OLLAMA_URL = config['ollama']['OLLAMA_URL']     # URL for the Ollama model
 app.MODEL_ID = config['ollama']['OLLAMA_MODEL']     # Ollama model name
-app.EMBEDDING_DIM = int(config['model']['EMBEDDING_DIM'])   # Embedding dim for index
+#app.EMBEDDING_DIM = int(config['index']['EMBEDDING_DIM'])   # Embedding dim for index
 app.INDEX_BIN_PATH = config['paths']['INDEX_BIN_PATH']      # Faiss index binary
 app.METADATA_DB_PATH = config['paths']['METADATA_DB_PATH']  # SQLite DB with file metadata
-app.K = int(config['model']['K'])                           # Pick top K matched files for querying 
+#app.K = int(config['index']['K'])                           # Pick top K matched files for querying 
 
 
 # Log incoming requests
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     print('\033[92mStarting flask server...\033[0m')
     
     # Create and serve the WSGI server
-    http_server = WSGIServer(('0.0.0.0', int(config['flask']['FLASK_PORT'])), app)
+    http_server = WSGIServer(('0.0.0.0', 8321), app)
     http_server.serve_forever()
     
     
