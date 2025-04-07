@@ -1,6 +1,8 @@
 from flask import Blueprint, jsonify, request, current_app 
 import requests 
 import os 
+from utils import get_root_directories
+import platform 
 
 
 # --- Config --- #
@@ -48,3 +50,10 @@ def read_file():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+@fs_bp.route('/get-sys-info', methods=['GET'])
+def get_cwd():
+    return jsonify({
+        'root_dirs': get_root_directories(),
+        'system': platform.system()
+    })
