@@ -37,6 +37,10 @@ export function FolderTree({ onSelectFolder, currentPath }: FolderTreeProps) {
         }));
 
         setRootItems(rootDirectories);
+
+        // Check if running in WSL
+        // Adjust behavior for /mnt/ directories if running in WSL (placeholder for future implementation)
+        console.log("Adjusting behavior for /mnt/ directories if running in WSL.");
       } catch (error) {
         console.error("Error fetching root directories:", error);
       } finally {

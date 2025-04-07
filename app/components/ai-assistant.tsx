@@ -34,9 +34,18 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
     setLoading(true);
 
     try {
-      // Append the current path to the prompt
-      const fullPrompt = `This is the current path I am, so related any path related queries 
-      to this: ${currentPath}\n\n${input}`;
+      // Check if running in WSL
+      const isWSL = (window as any).electronAPI?.isWSL ? (window as any).electronAPI.isWSL() : false;
+
+      // Append the current path and WSL context to the prompt
+      const fullPrompt = `If the following prompt is not relevant to path, then 
+      disregard the following. However, this is the current path I am, so relate 
+      any path-related queries to this: ${currentPath}
+      ${isWSL ? "Note: This is a WSL environment, so paths may include /mnt/." : ""}
+      \n
+      Now this is the actual query. If it isn't relevant to the path, then don't 
+      mention the path:
+      \n${input}`;
 
       const response = await fetch("http://localhost:8321/ai-assistant", {
         method: "POST",
