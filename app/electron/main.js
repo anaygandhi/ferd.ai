@@ -223,8 +223,11 @@ electron_1.ipcMain.handle("save-file-dialog", async (_, options = {}) => {
 
 const isWSL = () => {
     const release = os.release().toLowerCase();
+    console.log("This is the release:", release);
     return release.includes("microsoft") || release.includes("wsl");
 };
+
+
 
 electron_1.ipcMain.handle("get-root-directories", async () => {
     try {
@@ -239,13 +242,19 @@ electron_1.ipcMain.handle("get-root-directories", async () => {
                     .map((drive) => `/mnt/${drive}`);
                 rootDirectories = ["/", ...mntDrives];
             } else {
-                // Native Windows: Dynamically fetch drives
-                const drives = execSync("wmic logicaldisk get name")
-                    .toString()
-                    .split("\n")
-                    .filter((line) => line.trim().endsWith(":")) // Filter lines ending with ":"
-                    .map((drive) => drive.trim());
-                rootDirectories = drives;
+                // Native Windows: Dynamically fetch drives using PowerShell
+                try {
+                    const powershellScript = `Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq 3} | ForEach-Object {$_.Name}`;
+                    const drives = execSync(`powershell -Command "${powershellScript}"`)
+                        .toString()
+                        .split("\n")
+                        .map(drive => drive.trim())
+                        .filter(drive => drive !== ""); // Remove empty strings
+                    rootDirectories = drives;
+                } catch (error) {
+                    console.error("Error fetching drives using PowerShell:", error);
+                    rootDirectories = ["C:\\"]; // Fallback to C:\\ if PowerShell fails
+                }
             }
         } else {
             // macOS/Linux
