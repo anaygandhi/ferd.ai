@@ -17,11 +17,12 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: "Hello! I'm your AI file assistant. How can I help you organize or find your files today?",
+      content: "Hello! I'm your AI file assistant. How can I help you today?",
     },
   ]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false); // Add loading state
+  const [loading, setLoading] = useState(false);
+  const [queryType, setQueryType] = useState<"general" | "search" | "summarize">("general"); // Track query type
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -34,34 +35,19 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
     setLoading(true);
 
     try {
-      // Check if running in WSL
-      const isWSL = (window as any).electronAPI?.isWSL ? (window as any).electronAPI.isWSL() : false;
-
-      // Append the current path and WSL context to the prompt
-      const fullPrompt = `If the following prompt is not relevant to path, then 
-      disregard the following. However, this is the current path I am, so relate 
-      any path-related queries to this: ${currentPath}
-      ${isWSL ? "Note: This is a WSL environment, so paths may include /mnt/." : ""}
-      \n
-      Now this is the actual query. If it isn't relevant to the path, then don't 
-      mention the path:
-      \n${input}`;
+      const action = "generate"; // Default action for all query types
+      const params = { prompt: input }; // Default parameters
 
       const response = await fetch("http://localhost:8321/ai-assistant", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          action: "generate",
-          params: { 
-            prompt: fullPrompt, 
-          },
-        }),
+        body: JSON.stringify({ action, params }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch AI response");
+        throw new Error(`Failed to fetch AI response: ${response.status} - ${response.statusText}`);
       }
 
       const data = await response.json();
@@ -69,31 +55,70 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
 
       // Add assistant's response
       setMessages((prev) => [...prev, { role: "assistant", content: aiResponse }]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching AI response:", error);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "An error occurred while fetching the response. Please try again later." },
+        { role: "assistant", content: `An error occurred: ${error.message}` },
       ]);
     } finally {
-      setLoading(false); // Reset loading state
+      setLoading(false);
     }
   };
 
   return (
-    <div className="w-80 border-l bg-background">
-      <Card className="h-full rounded-none border-0">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-primary" />
-            <CardTitle className="text-base">AI Assistant</CardTitle>
+    <div className="w-80 border-l bg-background flex flex-col h-full">
+      <Card className="h-full rounded-none border-0 flex flex-col">
+        {/* Header */}
+        <CardHeader className="flex flex-col space-y-2 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-primary" />
+              <CardTitle className="text-base">AI Assistant</CardTitle>
+            </div>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+
+          {/* Query Type Buttons */}
+          <div className="flex flex-col gap-2 px-2 py-2">
+            <Button
+              variant={queryType === "general" ? "secondary" : "ghost"}
+              size="sm"
+              className={`w-full text-center ${
+                queryType === "general" ? "ring-2 ring-primary ring-offset-2" : ""
+              }`}
+              onClick={() => setQueryType("general")}
+            >
+              General Queries
+            </Button>
+            <Button
+              variant={queryType === "search" ? "secondary" : "ghost"}
+              size="sm"
+              className={`w-full text-center ${
+                queryType === "search" ? "ring-2 ring-primary ring-offset-2" : ""
+              }`}
+              onClick={() => setQueryType("search")}
+            >
+              Search for a File
+            </Button>
+            <Button
+              variant={queryType === "summarize" ? "secondary" : "ghost"}
+              size="sm"
+              className={`w-full text-center ${
+                queryType === "summarize" ? "ring-2 ring-primary ring-offset-2" : ""
+              }`}
+              onClick={() => setQueryType("summarize")}
+            >
+              File Summarization
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <ScrollArea className="h-[calc(100vh-120px)]">
+
+        {/* Chat Content */}
+        <CardContent className="flex-1 p-0 overflow-hidden">
+          <ScrollArea className="h-full">
             <div className="flex flex-col gap-3 p-4">
               {messages.map((message, index) => (
                 <div key={index} className={`flex ${message.role === "assistant" ? "justify-start" : "justify-end"}`}>
@@ -117,15 +142,17 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
             </div>
           </ScrollArea>
         </CardContent>
+
+        {/* Input Box */}
         <CardFooter className="p-3">
           <div className="flex w-full items-center gap-2">
             <Input
-              placeholder="Ask about your files..."
+              placeholder="Ask a question..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               className="flex-1"
-              disabled={loading} // Disable input while loading
+              disabled={loading}
             />
             <Button size="icon" onClick={handleSend} disabled={loading}>
               <Send className="h-4 w-4" />
