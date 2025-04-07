@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron"
 import { ElectronAPI } from "../lib/electron-api"; // Adjust the path if necessary
+import os from "os";
 
 declare global {
   interface Window {
@@ -32,6 +33,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // App info
   platform: process.platform,
+  isWSL: () => {
+    const release = os.release().toLowerCase();
+    return release.includes("microsoft") || release.includes("wsl");
+  },
   getRootDirectories: () => {
     console.log("Invoking get-root-directories from renderer process");
     return ipcRenderer.invoke("get-root-directories").then((response) => {

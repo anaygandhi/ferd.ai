@@ -37,8 +37,11 @@ const electron_1 = require("electron");
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const os = __importStar(require("os"));
+const { execSync } = require("child_process");
+
 // Keep a global reference of the window object to avoid garbage collection
 let mainWindow = null;
+
 // Create the browser window
 function createWindow() {
     mainWindow = new electron_1.BrowserWindow({
@@ -66,6 +69,7 @@ function createWindow() {
         mainWindow = null;
     });
 }
+
 // Initialize the app
 electron_1.app.whenReady().then(() => {
     createWindow();
@@ -75,11 +79,13 @@ electron_1.app.whenReady().then(() => {
             createWindow();
     });
 });
+
 // Quit when all windows are closed, except on macOS
 electron_1.app.on("window-all-closed", () => {
     if (process.platform !== "darwin")
         electron_1.app.quit();
 });
+
 // File system operations
 electron_1.ipcMain.handle("list-directory", async (_, dirPath) => {
     try {
@@ -214,13 +220,37 @@ electron_1.ipcMain.handle("save-file-dialog", async (_, options = {}) => {
         return null;
     return result.filePath;
 });
+
+const isWSL = () => {
+    const release = os.release().toLowerCase();
+    return release.includes("microsoft") || release.includes("wsl");
+};
+
 electron_1.ipcMain.handle("get-root-directories", async () => {
     try {
-        // Get root directories based on the platform
-        const rootDirectories =
-            process.platform === "win32"
-                ? ["C:\\", "D:\\"] // Example for Windows
-                : ["/"]; // Root directory for macOS/Linux
+        let rootDirectories;
+
+        if (process.platform === "win32") {
+            if (isWSL()) {
+                // WSL: Include /mnt/ directories for Windows drives
+                const mntDrives = fs
+                    .readdirSync("/mnt")
+                    .filter((drive) => /^[a-z]$/i.test(drive)) // Only single-letter drives (e.g., c, d)
+                    .map((drive) => `/mnt/${drive}`);
+                rootDirectories = ["/", ...mntDrives];
+            } else {
+                // Native Windows: Dynamically fetch drives
+                const drives = execSync("wmic logicaldisk get name")
+                    .toString()
+                    .split("\n")
+                    .filter((line) => line.trim().endsWith(":")) // Filter lines ending with ":"
+                    .map((drive) => drive.trim());
+                rootDirectories = drives;
+            }
+        } else {
+            // macOS/Linux
+            rootDirectories = ["/"];
+        }
 
         console.log("Root directories fetched in main process:", rootDirectories);
         return { success: true, directories: rootDirectories };
@@ -229,25 +259,26 @@ electron_1.ipcMain.handle("get-root-directories", async () => {
         return { success: false, error: err.message };
     }
 });
+
 electron_1.ipcMain.handle("get-recycle-bin", async () => {
-  try {
-    console.log("get-recycle-bin handler invoked");
-    const trashPath =
-      process.platform === "win32"
-        ? "C:\\$Recycle.Bin" // Windows Recycle Bin (requires special handling)
-        : path.join(os.homedir(), ".Trash"); // macOS/Linux Trash folder
+    try {
+        console.log("get-recycle-bin handler invoked");
+        const trashPath =
+            process.platform === "win32"
+                ? "C:\\$Recycle.Bin" // Windows Recycle Bin (requires special handling)
+                : path.join(os.homedir(), ".Trash"); // macOS/Linux Trash folder
 
-    const files = await fs.promises.readdir(trashPath, { withFileTypes: true });
-    const fileList = files.map((file) => ({
-      name: file.name,
-      path: path.join(trashPath, file.name),
-      isDirectory: file.isDirectory(),
-    }));
+        const files = await fs.promises.readdir(trashPath, { withFileTypes: true });
+        const fileList = files.map((file) => ({
+            name: file.name,
+            path: path.join(trashPath, file.name),
+            isDirectory: file.isDirectory(),
+        }));
 
-    console.log("Recycle bin contents:", fileList);
-    return { success: true, files: fileList };
-  } catch (error) {
-    console.error("Error fetching recycle bin contents:", error);
-    return { success: false, error: error.message };
-  }
+        console.log("Recycle bin contents:", fileList);
+        return { success: true, files: fileList };
+    } catch (error) {
+        console.error("Error fetching recycle bin contents:", error);
+        return { success: false, error: error.message };
+    }
 });
