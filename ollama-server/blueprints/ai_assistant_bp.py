@@ -175,11 +175,6 @@ def generate():
         return jsonify({
             "error": f"Missing required information (one of 'user_query', 'documents'). Given: {request_json}"
         }), 400
-    
-    print('\033[94mdocuments_dict type:\033[0m ', type(documents_dict))
-    with open('../file_indexing/test-results/documents-dict.json', 'w+') as file:
-        json.dump(documents_dict, file, indent=4)
-
 
     # Submit api req to ollama model
     try:
@@ -212,11 +207,6 @@ def generate():
             file: \n{documents_dict}\n
         """
 
-
-        with open('test-prompt.txt', 'w+') as file: 
-            file.write(formatted_prompt)
-
-
         # Make API req to ollama
         res = requests.post(
             f"{current_app.OLLAMA_URL}/api/generate",
@@ -230,12 +220,6 @@ def generate():
 
         # Verify req status
         res.raise_for_status()
-
-        print('\nres.json(): ', res.json())
-        print()
-
-        print('\nres.json()["response"]: ', res.json()['response'])
-        print()
 
         # Extract the json from the response's response 
         ollama_result:dict = extract_json(res.json()['response'])
