@@ -3,6 +3,7 @@ from flask_cors import CORS
 import os
 import yaml
 from gevent.pywsgi import WSGIServer
+from configparser import ConfigParser
 
 from blueprints import fs_bp, ai_bp
 
@@ -11,14 +12,18 @@ from blueprints import fs_bp, ai_bp
 app = Flask(__name__)
 CORS(app)
 
-# Load config.yaml if needed (optional)
-with open("run.yaml", "r") as f:
-    config = yaml.safe_load(f)
+# Load config 
+config:ConfigParser = ConfigParser()
+config.read('config/config.conf')
 
 # Add the config vars to the app so they can be accessed in the blueprints
-app.OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
-app.MODEL_ID = os.getenv("INFERENCE_MODEL", "llama3.2:3b-instruct-fp16")
-app.BASE_DIR = os.getcwd()
+app.OLLAMA_URL = config['ollama']['OLLAMA_URL']     # URL for the Ollama model
+app.MODEL_ID = config['ollama']['OLLAMA_MODEL']     # Ollama model name
+app.EMBEDDING_DIM = int(config['model']['EMBEDDING_DIM'])   # Embedding dim for index
+app.INDEX_BIN_PATH = config['paths']['INDEX_BIN_PATH']      # Faiss index binary
+app.METADATA_DB_PATH = config['paths']['METADATA_DB_PATH']  # SQLite DB with file metadata
+app.K = int(config['model']['K'])                           # Pick top K matched files for querying 
+
 
 # Log incoming requests
 @app.before_request
@@ -41,7 +46,7 @@ if __name__ == "__main__":
     print('\033[92mStarting flask server...\033[0m')
     
     # Create and serve the WSGI server
-    http_server = WSGIServer(('0.0.0.0', 8321), app)
+    http_server = WSGIServer(('0.0.0.0', int(config['flask']['FLASK_PORT'])), app)
     http_server.serve_forever()
     
     
