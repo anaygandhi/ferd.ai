@@ -37,6 +37,7 @@ if os.path.exists(INDEX_BIN_PATH):
     index:faiss.IndexFlatL2 = faiss.read_index(INDEX_BIN_PATH)
     print("\033[92mLoaded existing FAISS index.\033[0m")
 else:
+    print('Creating index')
     index:faiss.IndexFlatL2 = faiss.IndexFlatL2(EMBEDDING_DIM)
 
 # SQLite setup

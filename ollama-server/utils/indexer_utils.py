@@ -12,10 +12,10 @@ def index_directory(directory_path:str, model:object, cxn:sql.Connection, cursor
     """Indexes the files in the given directory into the given index and resaves the index at the given index_path."""
 
     # Iterate over the given directory
-    for root, dirs, files in os.walk(directory_path):
+    for root, dirs, files in tqdm(os.walk(directory_path), desc='Traversing directories'):
 
         # Iterate over all the files in the current directory 
-        for file in tqdm(files, desc="Indexing files"):
+        for file in files:
             
             # Check the file extension and ignore invalid files
             if not file.endswith(('.pdf', '.docx', '.txt')): continue 
