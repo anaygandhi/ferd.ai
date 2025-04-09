@@ -76,3 +76,44 @@
     color: hsl(var(--foreground));
   }
 }
+
+/* Custom styles for chat tab buttons */
+.chat-tab-button {
+  display: inline-flex;
+  align-items: center;
+  justify-center: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem; /* Text size */
+  font-weight: 500; /* Medium weight */
+  border-radius: 0.375rem; /* Rounded corners */
+  transition: background-color 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+
+.chat-tab-button-default {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.chat-tab-button-default:hover {
+  background-color: var(--primary-hover);
+}
+
+.chat-tab-button-secondary {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+.chat-tab-button-secondary:hover {
+  background-color: var(--secondary-hover);
+}
+
+.chat-tab-button-ghost {
+  background-color: transparent;
+  color: var(--accent-foreground);
+}
+
+.chat-tab-button-ghost:hover {
+  background-color: var(--accent);
+}
