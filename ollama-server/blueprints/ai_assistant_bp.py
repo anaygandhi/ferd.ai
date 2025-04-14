@@ -3,6 +3,7 @@ import requests
 import os 
 import json 
 from utils import extract_json
+from objects import OllamaQueryHandler
 
 
 # --- Config --- #
@@ -242,41 +243,25 @@ def summarize_document():
     # Extract the document content from the request body
     document_content:str = request_json.get('document_content', '') 
 
-    # Get the summary max length if provided
+    # Check that document content was given
+    if not document_content: 
+        return jsonify({
+            'error': 'Not provided document content.'
+        }), 400
+        
+    # Get the other details from the request if provided
     max_length:int = request_json.get('max_length', 500)
-
-    # Make req to Ollama model
-    try: 
-        
-        # Format a prompt 
-        formatted_prompt:str = f"""
-            Summarize the following text into less than or equal to {max_length} words, returning only the summary and no extra 
-            context, characters, or words: 
-            \n{document_content}
-        """
-
-        # Make API req
-        res = requests.post(
-            f"{current_app.OLLAMA_URL}/api/generate",
-            json={
-                "model": current_app.MODEL_ID,
-                "prompt": formatted_prompt,
-                "stream": False
-            }
-        )
-
-        # Verify req status
-        res.raise_for_status()
-
-        # Extract response JSON
-        response_json:dict = res.json()
-        
-        print('\033[92mOLLAMA RESPONSE: \033[0m', response_json)
-
-        # Return the response json 
-        return jsonify(res.json())
+    overlap:int = request_json.get('overlap', 100)
     
-    # Handle errors
-    except requests.RequestException as e:
-        return jsonify({"error": f"Request to OLLAMA failed: {str(e)}"}), 500
+    # Get the OllamaQueryHandler from the current app
+    ollama_query_handler:OllamaQueryHandler = current_app.ollama_query_handler
+    
+    # Summarize the given text
+    summary:str = ollama_query_handler.recursive_summarize_text(
+        document_content,
+        max_summary_len=max_length,
+        overlap=overlap
+    )
+    
+    
 

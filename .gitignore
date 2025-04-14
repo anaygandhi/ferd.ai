@@ -11,3 +11,4 @@ test_dir/*
 *.bin
 *__pycache__*
 venv/
+*.ipynb

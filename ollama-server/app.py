@@ -12,6 +12,7 @@ from flask import Flask, request, jsonify, current_app
 from flask_cors import CORS
 from gevent.pywsgi import WSGIServer
 from configparser import ConfigParser
+from objects import OllamaQueryHandler
 
 from ollama import ResponseError as OllamaResponseError
 from ollama import Client as OllamaClient
@@ -35,14 +36,18 @@ app.INDEX_BIN_PATH = config['paths']['INDEX_BIN_PATH']              # Faiss inde
 app.METADATA_DB_PATH = config['paths']['METADATA_DB_PATH']          # SQLite DB with file metadata
 app.K = int(config['index']['K'].strip())                           # Pick top K matched files for querying 
 
-# Init an ollama client and add to the app
-app.ollama_client = OllamaClient(host=config['ollama']['OLLAMA_URL'])
+# Init an ollama query handler and add to the app
+app.ollama_query_handler = OllamaQueryHandler(
+    OllamaClient(host=config['ollama']['OLLAMA_URL']),
+    app.MODEL_ID
+)
+
 
 # --- Test the ollama client --- # 
 print('\n\033[93mNOTICE: \033[0mtesting Ollama client with question: "What is the capital of France?"')
 
 try: 
-    response = app.ollama_client.generate(
+    response = app.ollama_query_handler.generate(
         model=app.MODEL_ID, 
         prompt='What is the capital of France?'
     )
