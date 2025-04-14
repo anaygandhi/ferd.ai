@@ -13,3 +13,4 @@ pdf2image==1.17.0
 nltk
 configparser
 ollama
+tiktoken
