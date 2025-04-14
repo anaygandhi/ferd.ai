@@ -12,3 +12,4 @@ test_dir/*
 *__pycache__*
 venv/
 *.ipynb
+*.vscode
