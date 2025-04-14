@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, current_app
 import requests 
 import os 
 import json 
-from utils import extract_json
+from utils import extract_json, read_file
 from objects import OllamaQueryHandler
 
 
@@ -235,21 +235,27 @@ def generate():
 
 @ai_bp.route('/summarize-document', methods=['POST']) 
 def summarize_document(): 
-    """Passes the given document content to the ollama model to summarize."""
+    """Passes the given document to the ollama model to summarize."""
 
     # Get the given request body
     request_json:dict = request.get_json()
 
-    # Extract the document content from the request body
-    document_content:str = request_json.get('document_content', '') 
+    # Extract the absolute filepath from the request body
+    abs_filepath:str = request_json.get('filepath', '') 
 
-    # Check that document content was given
-    if not document_content: 
+    # Check that document content was given 
+    if not abs_filepath: 
         return jsonify({
-            'error': 'Not provided document content.'
+            'error': 'Not provided a filepath.'
         }), 400
         
-    # Get the other details from the request if provided
+    # Check that the file exists 
+    if not os.path.exists(abs_filepath): 
+        return jsonify({
+            'error': f'The given filepath "{abs_filepath}" does not exist.'
+        }), 404
+        
+    # Get the other details from the request as provided
     max_length:int = request_json.get('max_length', 500)
     overlap:int = request_json.get('overlap', 100)
     
@@ -257,11 +263,25 @@ def summarize_document():
     ollama_query_handler:OllamaQueryHandler = current_app.ollama_query_handler
     
     # Summarize the given text
-    summary:str = ollama_query_handler.recursive_summarize_text(
-        document_content,
-        max_summary_len=max_length,
-        overlap=overlap
-    )
+    try: 
+        summary:str = ollama_query_handler.recursive_summarize_text(
+            read_file(abs_filepath),
+            max_summary_len=max_length,
+            overlap=overlap
+        )
+        
+    # Value error means the given file type is not readable
+    except ValueError: 
+        return jsonify({
+            'error': f'Given file "{abs_filepath}" is not a supported file type. Accepted types are: PDF, TXT, DOCX.'
+        }), 400
+        
+    # Return the summary
+    return jsonify({
+        'status': 200,
+        'summary': summary,
+        'file_path': abs_filepath
+    })
     
     
 
