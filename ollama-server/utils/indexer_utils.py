@@ -3,19 +3,120 @@ import os
 import numpy as np 
 import faiss
 import sqlite3 as sql
+import datetime as dt
 
 from .metadata_extraction_utils import extract_metadata
 from .text_extraction_utils import read_file
+from .general import now, hash_file_sha256
 
 
-def index_directory(directory_path:str, model:object, cxn:sql.Connection, cursor:sql.Cursor, embedding_dim:int, index_path:str, index:faiss.IndexFlatL2) -> None:
+def index_filesystem(start:str, model:object, cxn:sql.Connection, cursor:sql.Cursor, embedding_dim:int, index_path:str, index:faiss.IndexFlatL2, verbose:bool=False): 
+    """Recursively indexes the files starting at the given [start] point and traverses each child directory."""
+
+    print('STARTING FROM ', start)
+    
+    # Start with the given [start] dir
+    for root, dirs, files in os.walk(start):
+
+        # Info print
+        if verbose: print(f'\n\033[0m[{now()}] \033[93mTraversing directory ("{root}").\n')
+
+        # Do the files in this directory first 
+        for filename in files:
+
+            # Construct the whole file path
+            filepath:str = os.path.join(root, filename)
+
+            try: 
+                # Check the file extension and ignore invalid files
+                if not filename.endswith(('.pdf', '.docx', '.txt')): 
+                    if verbose: print(f'\033[0m[{now()}] \033[90mINFO: \033[0mskipping "{filepath}" because it is not a supported extension.')
+                    continue 
+
+                # Hash the file 
+                file_hash:str = hash_file_sha256(filepath)
+
+                # Check if this file exists in the DB already
+                cursor.execute('SELECT file_path, file_sha256 FROM file_metadata WHERE file_path = ?', (filepath,))
+
+                # Get the result 
+                db_filepath, db_hash = cursor.fetchone()
+
+                # Handle result
+                if db_filepath: 
+
+                    # Check if the hashes match
+                    if file_hash == db_hash: 
+                        print(f'\033[0m[{now()}] \033[90mINFO: \033[0mignoring "{filepath}" since it already exists with the same hash.')
+                        continue 
+
+                    # If hashes do not match, reindex the file
+                    else: 
+                        print(f'\033[0m[{now()}] \033[90mINFO: \033[0mFile "{filepath}" already exists in the database but with a different hash - updating DB entry.')
+                        
+                        # Delete the existing row in the db 
+                        cursor.execute("DELETE FROM file_metadata WHERE file_path == %s", (filepath,))
+                        cxn.commit()
+
+                # Extract the metadata, text, and embedding for this file
+                metadata:dict[str, str|int] = extract_metadata(filepath)
+                file_text:str = read_file(filepath)
+                embedding:int = model.encode(file_text)
+
+                # Check the embedding 
+                if embedding is None or len(embedding) != embedding_dim:
+                    print(f"\033[0m[{now()}] \033[93mWARN in index_directory(): \033[0mFailed to generate valid embedding for {filepath}. Skipping.")
+                    continue
+                
+                # Convert the embedding to an array and add to the index
+                embedding_array:np.ndarray = np.array(embedding, dtype=np.float32).reshape(1, -1)
+                index.add(embedding_array)
+
+                # Insert the metadata for this file into the DB
+                cursor.execute(
+                    '''
+                        INSERT INTO file_metadata (file_path, file_name, file_size, file_sha256, created, modified, embedding)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ''', 
+                    (
+                        filepath,
+                        filename,
+                        metadata.get('file_size', 0),
+                        file_hash,
+                        metadata.get('created', ''),
+                        metadata.get('modified', ''),
+                        embedding_array.tobytes()
+                    )
+                )
+
+                # Commit changes
+                cxn.commit()
+
+            # Handle exceptions
+            except Exception as e:
+                print(f"Error processing {filepath}: {e}")
+
+        # Now iterate over the directories 
+        for dir in dirs: 
+            index_directory(dir)
+
+
+    # Save the index
+    faiss.write_index(index, index_path)
+    print("\033[92mSUCCESS: \033[0mFAISS index saved.")
+
+
+def index_directory(directory_path:str, model:object, cxn:sql.Connection, cursor:sql.Cursor, embedding_dim:int, index_path:str, index:faiss.IndexFlatL2, verbose:bool=False) -> None:
     """Indexes the files in the given directory into the given index and resaves the index at the given index_path."""
 
     # Iterate over the given directory
-    for root, dirs, files in tqdm(os.walk(directory_path), desc='Traversing directories'):
+    for root, dirs, files in os.walk(directory_path):
+
+        # Info print
+        if verbose: print(f'\n\033[0m[{now()}] \033[93mTraversing directory ("{root}").\n')
 
         # Iterate over all the files in the current directory 
-        for file in files:
+        for file in tqdm(files, total=len(files), desc=f'Indexing files'):
             
             # Check the file extension and ignore invalid files
             if not file.endswith(('.pdf', '.docx', '.txt')): continue 
@@ -68,10 +169,6 @@ def index_directory(directory_path:str, model:object, cxn:sql.Connection, cursor
             # Handle exceptions
             except Exception as e:
                 print(f"Error processing {file_path}: {e}")
-
-    # Save the index
-    faiss.write_index(index, index_path)
-    print("FAISS index saved.")
 
 
 def search_files(query:str, model, embedding_dim:int, index:faiss.IndexFlatL2, cursor:sql.Cursor, top_k:int=5):

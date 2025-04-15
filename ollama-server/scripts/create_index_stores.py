@@ -12,7 +12,7 @@ parent_dir:str = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-from utils import index_directory
+from utils import index_filesystem
 
 
 # NOTE: the [INPUT_DIR_PATH] is the TL directory to start indexing from
@@ -96,6 +96,7 @@ cursor.execute('''
         file_path TEXT UNIQUE,
         file_name TEXT,
         file_size INTEGER,
+        file_sha256 TEXT,
         created TEXT,
         modified TEXT,
         embedding BLOB
@@ -108,12 +109,13 @@ cxn.commit()
 
 # --- Indexer --- #
 # Index the directory
-index_directory(
+index_filesystem(
     INPUT_DIR_PATH,     # Input dir path
     model,              # Sentence transformer model
     cxn,                # Sqlite connection
     cursor,             # Sqlite cursor
     EMBEDDING_DIM,      # Embedding dim 
     INDEX_BIN_PATH,
-    index
+    index,
+    verbose=True
 )
