@@ -8,11 +8,13 @@ DESC: the main script to run the flask server.
 print('\n--------------------------------------------------')
 print('\033[94mINFO: \033[0minitializing flask server.\n')
 
+import sqlite3 as sql
 from flask import Flask, request, jsonify, current_app
 from flask_cors import CORS
 from gevent.pywsgi import WSGIServer
 from configparser import ConfigParser
 from objects import OllamaQueryHandler
+from sentence_transformers import SentenceTransformer
 
 from ollama import ResponseError as OllamaResponseError
 from ollama import Client as OllamaClient
@@ -36,11 +38,18 @@ app.INDEX_BIN_PATH = config['paths']['INDEX_BIN_PATH']              # Faiss inde
 app.METADATA_DB_PATH = config['paths']['METADATA_DB_PATH']          # SQLite DB with file metadata
 app.K = int(config['index']['K'].strip())                           # Pick top K matched files for querying 
 
+# Init a db connection to the file metadata db and add to the app
+app.db_conn = sql.connect(config['paths']['METADATA_DB_PATH'])
+app.db_cursor = app.db_conn.cursor()
+
 # Init an ollama query handler and add to the app
 app.ollama_query_handler = OllamaQueryHandler(
     OllamaClient(host=config['ollama']['OLLAMA_URL']),
     app.MODEL_ID
 )
+
+# Init a sentence transformer model and add to the app
+app.sentence_transformer_model = SentenceTransformer('all-MiniLM-L6-v2')  
 
 
 # --- Test the ollama client --- # 
