@@ -2,8 +2,11 @@ from flask import Blueprint, jsonify, request, current_app
 import requests 
 import os 
 import json 
-from utils import extract_json, read_file
+import sqlite3 as sql
+
+from utils import extract_json, read_file, search_files, tokenize_no_stopwords
 from objects import OllamaQueryHandler
+import faiss 
 
 
 # --- Config --- #
@@ -60,34 +63,30 @@ def ai_assistant():
             if not prompt:
                 return jsonify({"error": "No prompt provided for generate action"}), 400
 
-            # Define a payload for the ollama api req
-            payload:dict = {
-                "model": current_app.MODEL_ID,
-                "prompt": prompt,
-                "stream": False
-            }
-
+            # Get the ollama query handler from the app
+            ollama_query_handler:OllamaQueryHandler = current_app.ollama_query_handler
+            
             # Make ollama api req
-            try:
-                res = requests.post(f"{current_app.OLLAMA_URL}/api/generate", json=payload)
-                res.raise_for_status()
-                return jsonify(res.json())
-        
-            except requests.RequestException as e:
-                return jsonify({"error": f"Request to OLLAMA failed: {str(e)}"}), 500
+            try: 
+                ollama_response:str = ollama_query_handler.generate(prompt)
+            except Exception as e: 
+                return jsonify({
+                    'error': 'An error occured making the Ollama request.',
+                    'message': str(e)
+                }), 500
+            
+            # Return the response
+            return jsonify({
+                'ollama_response': ollama_response
+            })
 
         # Action list_files
         case "list_files":
-
-            # Get the directory from the req, defaulting to root dir
-            directory = params.get("directory", "/")
-
             try:
-                # Get the files for the given dir 
-                files:list[str] = os.listdir(directory)
-
-                # Return the list of files 
-                return jsonify({"files": files})
+                # Return the list of files in the given directory (or default to root)
+                return jsonify({
+                    "files": os.listdir(params.get("directory", "/"))
+                })
 
             # Handle exceptions 
             # Given dir does not exist
@@ -139,19 +138,19 @@ def ai_assistant():
             return jsonify({"error": f"Unknown action: {action}"}), 400
     
     
-@ai_bp.route("/generate", methods=["POST"])
-def generate():
-    """Endpoint to generate a prompt from the ollama model.
+@ai_bp.route("/search-files", methods=["POST"])
+def search_files():
+    """Endpoint to find a file in the filesystem based on some query.
     
     REQ BODY: 
         The request body should look like: 
         
         { 
-            "prompt": "<some prompt>"
+            "query": "<some query>"
         }
         
     RETURNS: 
-        200 | success | JSON | the requested content as a JSON object.
+        200 | success | JSON | a JSON obj with three keys: 'faiss_top_files', 'ollama_response', and 'top_match'.
         400 | bad request | -- | if the user fails to supply a required parameter or the request body is malformed.
         500 | internal server error | -- | if some other error occurs when processing the request.
 
@@ -162,71 +161,76 @@ def generate():
         
         # Get JSON
         request_json:dict = request.get_json()
-        print('request_json: ', request_json)
 
         # Extract user_query and document_content  
-        user_query:str = request_json.get("user_query", "")
-        documents_dict:dict = request_json.get('documents', {})
+        user_query:str = request_json.get("query", "")
 
         # Verify the information is given
-        if not all([user_query, documents_dict]): raise Exception
+        if not user_query: raise Exception
     
     # Handle errors
     except Exception as e: 
         return jsonify({
-            "error": f"Missing required information (one of 'user_query', 'documents'). Given: {request_json}"
+            "error": f"Missing 'query'). Given: {request_json}"
         }), 400
+
+    # Use Faiss index to get the top 3 documents that match the query
+    # Load the Faiss index
+    index:faiss.IndexFlatL2 = faiss.read_index(current_app.INDEX_BIN_PATH)
+
+    # Get the top 3 documents
+    top_files:list[str] = search_files(
+        user_query, 
+        current_app.sentence_transformer_model,
+        current_app.EMBEDDING_DIM,
+        index,
+        current_app.db_cursor,
+        top_k=current_app.K
+    )
+
+    # Convert the file names to absolute paths 
+    top_filepaths:list[str] = current_app.db_cursor.execute(
+        f"""
+            SELECT file_path 
+            FROM file_metadata 
+            WHERE file_name IN ({','.join(['%s' for _ in top_files])})
+        """,
+        top_files
+    )
+
+    # Read each of the files into a dict of { filename : file_content }
+    documents_dict:dict[str,str] = {
+        filepath : read_file(filepath) for filepath in top_filepaths
+    }
 
     # Submit api req to ollama model
     try:
         
-        # Format a JSON string to use as an example to pass to the model
-        example_json:str = {
-            filename : {
-                'confidence': '<int, confidence score for this file>',
-                'context': '<1-2 sentences about your reasoning for this file>' 
-            }
-            for filename in list(documents_dict.keys())
-        }
+        # Get the OllamaQueryHandler from the current app
+        ollama_query_handler:OllamaQueryHandler = current_app.ollama_query_handler
 
-        # Format a prompt
-        formatted_prompt:str = f"""
-            Ignore all previous instructions and do not remember anything after this response. Respond to this prompt as if it's the only thing you've seen.\n
-            \nHere is the query: "{user_query}"\n
-            \nHere are your instructions: I want you to take this query and compare it to all the given files.
-            \nReturn a JSON object with keys for each of the filenames, and the values should be a dictionary containing
-            two keys called "confidence" and "context". The "confidence" should be your confidence that the document 
-            matches the given query in the range 0-100 inclusive, and "context" should be two sentences or less that 
-            describe why you chose that confidence score. In the "context", you can explain your reasoning and/or include 
-            specific references to the given document content, and I want you to quote the query in the "context" too. You 
-            should calculate the confidence relative to the other given documents.
-            \nYour response should look exactly like this, with no additional 
-            characters: {json.dumps(example_json)}\n
-            \nYour confidence should be primarily based on the document content. Additionally, I don't want 
-            any additional information, context, explanation, or characters - just return the JSON object.
-            \n\nHere is the information for all files, where the keys are filenames and values are the content of that
-            file: \n{documents_dict}\n
-        """
-
-        # Make API req to ollama
-        res = requests.post(
-            f"{current_app.OLLAMA_URL}/api/generate",
-            json={
-                "model": current_app.MODEL_ID,
-                "prompt": formatted_prompt,
-                "stream": False,
-                "context": []
-            }
+        # Call the generate() method 
+        ollama_raw_response:str = ollama_query_handler.get_confidence(
+            user_query,
+            documents_dict
         )
 
-        # Verify req status
-        res.raise_for_status()
-
         # Extract the json from the response's response 
-        ollama_result:dict = extract_json(res.json()['response'])
+        ollama_result_json:dict = extract_json(ollama_raw_response)
+
+        # Get the top match according to ollama
+        top_match:str = max(ollama_result_json, key=lambda k: int(ollama_result_json[k]["confidence"]))
 
         # Return the response json 
-        return jsonify(ollama_result)
+        return jsonify({
+            'faiss_top_files': top_filepaths,
+            'ollama_response': ollama_result_json,
+            'top_match': {
+                'file_path': top_match,
+                'confidence': ollama_result_json[top_match]['confidence'],
+                'context': ollama_result_json[top_match]['context']
+            }
+        })
     
     # Handle errors
     except requests.RequestException as e:
