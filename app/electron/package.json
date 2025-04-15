@@ -1,0 +1,62 @@
+{
+    "name": "ai-file-explorer",
+    "version": "1.0.0",
+    "description": "AI-powered file explorer for Windows and Mac",
+    "main": "main.js",
+    "scripts": {
+      "dev": "concurrently \"npm run dev:next\" \"npm run dev:electron\"",
+      "dev:next": "next dev",
+      "dev:electron": "electron-forge start",
+      "build": "next build && next export -o out && electron-forge package",
+      "start": "electron-forge start",
+      "package": "electron-forge package",
+      "make": "electron-forge make"
+    },
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+      "@electron-forge/cli": "^6.4.2",
+      "@electron-forge/maker-deb": "^6.4.2",
+      "@electron-forge/maker-rpm": "^6.4.2",
+      "@electron-forge/maker-squirrel": "^6.4.2",
+      "@electron-forge/maker-zip": "^6.4.2",
+      "concurrently": "^8.2.1",
+      "electron": "^26.2.1",
+      "typescript": "^5.2.2"
+    },
+    "dependencies": {
+      "electron-squirrel-startup": "^1.0.0"
+    },
+    "config": {
+      "forge": {
+        "packagerConfig": {
+          "name": "AI File Explorer",
+          "executableName": "ai-file-explorer",
+          "icon": "./assets/icon",
+          "asar": true
+        },
+        "makers": [
+          {
+            "name": "@electron-forge/maker-squirrel",
+            "config": {
+              "name": "ai_file_explorer"
+            }
+          },
+          {
+            "name": "@electron-forge/maker-zip",
+            "platforms": ["darwin"]
+          },
+          {
+            "name": "@electron-forge/maker-deb",
+            "config": {}
+          },
+          {
+            "name": "@electron-forge/maker-rpm",
+            "config": {}
+          }
+        ]
+      }
+    }
+  }
+  
+  
