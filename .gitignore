@@ -13,3 +13,4 @@ test_dir/*
 venv/
 *.ipynb
 *.vscode
+*.venv
