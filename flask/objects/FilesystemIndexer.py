@@ -45,7 +45,7 @@ class FilesystemIndexer:
         if overwrite: 
             
             # Info print 
-            if verbose: print_log('INFO', 'index_filesystem()', f'Overwriting existing index at "{self.index_bin_path}".')
+            if verbose: print_log('WARN', 'index_filesystem()', f'Overwriting existing index at "{self.index_bin_path}".')
             
             # Delete the existing index 
             if os.path.exists(self.index_bin_path): os.remove(self.index_bin_path)
@@ -85,6 +85,10 @@ class FilesystemIndexer:
                     index,
                     verbose=verbose
                 )
+                
+        # Save the index
+        faiss.write_index(index, self.index_bin_path)
+        print_log('SUCCESS', 'FilesystemIndexer.index_filesystem()', f'FAISS index saved to "{self.index_bin_path}"') 
                 
     
     def index_file(self, filepath:str, index:faiss.IndexFlatL2, verbose:bool=False) -> None: 
