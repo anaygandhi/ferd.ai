@@ -1,2 +1,3 @@
 from .OllamaQueryHandler import OllamaQueryHandler
 from .FilesystemIndexer import FilesystemIndexer
+from .FileMetadataDatabase import FileMetadataDatabase
