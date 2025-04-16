@@ -36,6 +36,9 @@ class FileMetadataDatabase:
             with open(create_tables_script, 'r') as file: 
                 self.cursor.executescript(file.read())
                 
+            # Commit changes
+            self.cxn.commit()
+                
     
     def get_table_columns(self, table_name:str) -> list[str]: 
         """Returns the columns for the given table name."""
