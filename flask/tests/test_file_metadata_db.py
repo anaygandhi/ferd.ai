@@ -1,18 +1,15 @@
 
 import pytest
-from configparser import ConfigParser
-
-# Modify sys path for util and obj imports 
 import sys
 import os
 
+# Modify sys path for util and obj imports 
 parent_dir:str = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
     
 # Finish imports 
 from objects import FileMetadataDatabase 
-from utils import normalize_path
 
  
 # ---- Config ---- # 
