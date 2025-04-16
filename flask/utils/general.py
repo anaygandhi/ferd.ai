@@ -1,4 +1,4 @@
-import re
+import os
 import json
 from hashlib import sha256
 import platform 
@@ -10,6 +10,9 @@ def now() -> str:
     return dt.datetime.now().strftime('%H:%M:%S')
 
 
+def normalize_path(path: str) -> str:
+    """Converts the given path to absolute (if needed) and replaces backslashes ("\") with forward slashes ("/") """
+    return os.path.abspath(path).replace('\\', '/').rstrip('/')
 
 
 def hash_file_sha256(path:str, chunk_size:int=8192) -> str:
