@@ -5,7 +5,7 @@ def print_log(level:str, loc:str, msg:str) -> None:
     """Prints the given message to the terminal with a timestamp and the given log level.
     
         Parameters: 
-            level (str): level to print - accepted levels are: "INFO" (grey), "WARN" (yellow), "ERROR" (red), "MISC" (blue).
+            level (str): level to print - accepted levels are: "INFO" (grey), "WARN" (yellow), "ERROR" (red), "SUCCESS" (green), "MISC" (blue).
             loc (str): the calling function so that the log is meaningful and can be traced.
             msg (str): message to print after the timestamp and level (appears in white).
             
@@ -21,6 +21,7 @@ def print_log(level:str, loc:str, msg:str) -> None:
         case 'WARN': color:str = '\033[93m'     # Yellow
         case 'ERROR': color:str = '\033[91m'    # Red
         case 'MISC': color:str = '\033[94m'     # Blue
+        case 'SUCCESS': color:str = '\033[92m'  # Green
         case _: color:str = '\033[94m'          # Default: Blue
     
     # Print the log
