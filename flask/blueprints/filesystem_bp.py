@@ -1,8 +1,11 @@
 from flask import Blueprint, jsonify, request, current_app 
 import requests 
 import os 
-from utils import get_root_directories
+
 import platform 
+
+from objects import FileMetadataDatabase
+from utils import get_root_directories
 
 
 # --- Config --- #
@@ -56,4 +59,17 @@ def get_cwd():
     return jsonify({
         'root_dirs': get_root_directories(),
         'system': platform.system()
+    })
+    
+
+@fs_bp.route('/get-ignored-paths', methods=['GET']) 
+def get_ignored_dirs(): 
+    """Returns a list of all the ignored paths according to the current state of the metadata DB."""
+    
+    # Get the DB cxn from the app
+    metadata_db:FileMetadataDatabase = current_app.file_metadata_db
+    
+    # Use the metadata db to get the ignored dirs and return the list
+    return jsonify({
+        'ignored_paths': metadata_db.get_all_ignored_paths()
     })

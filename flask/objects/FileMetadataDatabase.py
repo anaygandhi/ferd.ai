@@ -247,3 +247,11 @@ class FileMetadataDatabase:
         
         # Fetch results and return
         return [r[0] for r in self.cursor.fetchall()]
+    
+    
+    def get_all_ignored_paths(self) -> list[str]: 
+        """Returns all the ignored directories and files in the ignore_paths table and returns the results as a list of 
+        dicts, where each dict is like: {'path': '<ignored_path>', 'type': '<file|directory>'."""
+        
+        # Use the table_as_df util to get the ignored_paths table as a df, orient to a list of dict, and return
+        return self.table_as_df('ignored_paths').to_dict(orient='records')

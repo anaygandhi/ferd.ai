@@ -13,13 +13,14 @@ from flask import Flask, request, jsonify, current_app
 from flask_cors import CORS
 from gevent.pywsgi import WSGIServer
 from configparser import ConfigParser
-from objects import OllamaQueryHandler
+from objects import OllamaQueryHandler, FileMetadataDatabase, FilesystemIndexer
 from sentence_transformers import SentenceTransformer
 
 from ollama import ResponseError as OllamaResponseError
 from ollama import Client as OllamaClient
 
 from blueprints import fs_bp, ai_bp
+from utils import get_root_directories
 
 
 # --- Flask init --- #
@@ -39,8 +40,15 @@ app.METADATA_DB_PATH = config['paths']['METADATA_DB_PATH']          # SQLite DB 
 app.K = int(config['index']['K'].strip())                           # Pick top K matched files for querying 
 
 # Init a db connection to the file metadata db and add to the app
-app.db_conn = sql.connect(config['paths']['METADATA_DB_PATH'])
-app.db_cursor = app.db_conn.cursor()
+app.file_metadata_db = FileMetadataDatabase(config['paths']['METADATA_DB_PATH'])
+
+# Init a file indexer and add to the app
+app.filesystem_indexer = FilesystemIndexer(
+    get_root_directories()[0],                      # start_dir - NOTE: Use the first mounted drive as the default
+    config['paths']['METADATA_DB_PATH'],            # metadata_db_path
+    config['paths']['INDEX_BIN_PATH'],              # index_bin_path
+    int(config['index']['EMBEDDING_DIM'].strip())   # embedding_dim
+)
 
 # Init an ollama query handler and add to the app
 app.ollama_query_handler = OllamaQueryHandler(
