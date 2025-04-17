@@ -14,3 +14,4 @@ nltk
 configparser
 ollama
 tiktoken
+pandas
