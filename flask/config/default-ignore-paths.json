@@ -1,0 +1,28 @@
+{
+    "Windows": [
+        "C:/Windows/*",
+        "C:/Program Files/*",
+        "C:/Program Files (x86)/*",
+        "C:/$Recycle.Bin/*"
+    ],
+    "Linux": [
+        "/proc/*",
+        "/sys/*",
+        "/dev/*",
+        "/run/*",
+        "/tmp/*",
+        "/var/tmp/*",
+        "/var/lib/*",
+        "/var/cache/*",
+        "/var/spool/*",
+        "/boot/*",
+        "/lib/*",
+        "/lib64/*",
+        "/usr/lib*/*",
+        "/media/*",
+        "/snap/*",
+        "/lost+found/*",
+        "/sys/fs/cgroup/*",
+        "/srv/*"
+    ]
+}
