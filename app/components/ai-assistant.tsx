@@ -45,39 +45,82 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
     setLoading(true);
 
     try {
-      // Validation for "summarize" query type
+      // Handle "summarize" query type
       if (queryType === "summarize") {
-        // Check if the input is an absolute path
-        const isAbsolutePath = input.startsWith("/") || /^[a-zA-Z]:\\/.test(input); // Unix or Windows absolute path
-        if (!isAbsolutePath) {
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: "The provided path is not an absolute path. Please enter a valid absolute path." },
-          ]);
-          setLoading(false);
-          return; // Stop execution here
-        }
-
-        // Check if the path exists on the file system
-        const pathExists = await fetch(`/api/check-path`, {
+        const responseSummarize = await fetch("http://localhost:8321/summarize-document", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ path: input }),
-        }).then((res) => res.json());
+          body: JSON.stringify({
+            filepath: input,
+            max_length: 500, // Optional: Adjust as needed
+            overlap: 100,    // Optional: Adjust as needed
+          }),
+        });
 
-        if (!pathExists.exists) {
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: "The provided path does not exist on the file system. Please enter a valid path." },
-          ]);
-          setLoading(false);
-          return; // Stop execution here
+        if (!responseSummarize.ok) {
+          throw new Error(`Failed to fetch summary: ${responseSummarize.status} - ${responseSummarize.statusText}`);
         }
+
+        const dataSummarize = await responseSummarize.json();
+
+        if (dataSummarize.error) {
+          throw new Error(dataSummarize.error);
+        }
+
+        const summary = dataSummarize.summary || "No summary available.";
+
+        // Add assistant's response
+        setMessages((prev) => [...prev, { role: "assistant", content: summary }]);
+        return; // Stop further execution for summarize
       }
 
-      // Send the query to the model
+      // Handle "search" query type
+      if (queryType === "search") {
+        const responseSearch = await fetch("http://localhost:8321/search-files", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query: input, // The search query entered by the user
+            start_dir: searchDirectory || "/", // The directory to start the search from, defaults to root
+          }),
+        });
+
+        if (!responseSearch.ok) {
+          throw new Error(`Failed to search files: ${responseSearch.status} - ${responseSearch.statusText}`);
+        }
+
+        const dataSearch = await responseSearch.json();
+
+        if (dataSearch.error) {
+          throw new Error(dataSearch.error);
+        }
+
+        // Extract the top match and other details
+        const topMatch = dataSearch.top_match || {};
+        const faissTopFiles = dataSearch.faiss_top_files || [];
+        const ollamaResponse = dataSearch.ollama_response || {};
+
+        // Format the response for the assistant
+        const searchResultMessage = `
+          **Top Match**:
+          - File Path: ${topMatch.file_path || "N/A"}
+          - Confidence: ${topMatch.confidence || "N/A"}
+          - Context: ${topMatch.context || "N/A"}
+
+          **Other Matches**:
+          ${faissTopFiles.length > 0 ? faissTopFiles.join("\n") : "No other matches found."}
+        `;
+
+        // Add assistant's response
+        setMessages((prev) => [...prev, { role: "assistant", content: searchResultMessage }]);
+        return; // Stop further execution for search
+      }
+
+      // Default behavior for other query types
       const action = "generate"; // Default action for all query types
       const params = { prompt: input }; // Default parameters
 
@@ -171,7 +214,7 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
                   <div
                     className={`rounded-lg px-3 py-2 text-sm shadow ${
                       message.role === "assistant" ? "bg-muted text-foreground" : "bg-primary text-primary-foreground"
-                    } max-w-[90%]`}
+                    } max-w-[90%] break-words`}
                   >
                     {message.content}
                   </div>
