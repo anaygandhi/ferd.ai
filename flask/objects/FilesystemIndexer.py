@@ -167,3 +167,30 @@ class FilesystemIndexer:
         # Handle exceptions
         except Exception as e:
             print_log('ERROR', 'FilesystemIndexer.index_file()', f"Error processing {filepath}. Caught exception: {e.__class__} - {e}")
+            
+            
+    def search_files(self, query:str, top_k:int=5) -> list[int]:
+        """Searches the index for the given query and returns the top_k matched file IDs."""
+
+        # If the index filepath doesn't exist, then we cannot search, so return empty list
+        if not os.path.exists(self.index_bin_path): return []
+        
+        # Read the existing index 
+        index:faiss.IndexFlatL2 = faiss.read_index(self.index_bin_path)
+        
+        # Encode the query into an embedding and convert to a np array
+        query_embedding:np.ndarray = np.array(
+            self.sentence_transformer.encode(query), 
+            dtype=np.float32
+        ).reshape(1, -1)
+
+        # Check shape of the query embedding 
+        if query_embedding.shape[1] != self.embedding_dim:
+            print("\033[91mERROR in search_files(): \033[0mQuery embedding has incorrect dimensions. Aborting search.")
+            return []
+
+        # Search the index for the query embedding for the top_k documents 
+        _, indices = index.search(query_embedding, top_k)
+
+        # Return the matched indices
+        return indices

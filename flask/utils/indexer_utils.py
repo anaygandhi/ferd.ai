@@ -169,38 +169,3 @@ def index_directory(directory_path:str, model:object, cxn:sql.Connection, cursor
             # Handle exceptions
             except Exception as e:
                 print(f"Error processing {file_path}: {e}")
-
-
-def search_files(query:str, model, embedding_dim:int, index:faiss.IndexFlatL2, cursor:sql.Cursor, top_k:int=5):
-    """Searches the given index for the given query, using the given model to create an embedding for the query, and returns 
-    the top_k matched filenames."""
-
-    # Encode the query into an embedding and convert to a np array
-    query_embedding:np.ndarray = np.array(model.encode(query), dtype=np.float32).reshape(1, -1)
-
-    # Check shape of the query embedding 
-    if query_embedding.shape[1] != embedding_dim:
-        print("\033[91mERROR in search_files(): \033[0mQuery embedding has incorrect dimensions. Aborting search.")
-        return []
-
-    # Search the index for the query embedding for the top_k documents 
-    _, indices = index.search(query_embedding, top_k)
-
-    # Init an array of filenames to return
-    file_names:list[str] = []
-
-    # Iterate over the index matches and save the filenames
-    for idx in indices[0]:
-
-        # Check if valid index
-        if idx != -1:
-
-            # Get the filename for this index 
-            cursor.execute(f"SELECT file_name FROM file_metadata WHERE id = {idx + 1}")
-            result = cursor.fetchone()
-
-            # Add result to the list of file names if it exists
-            if result: file_names.append(result[0])
-
-    # Return the populated list of filenames 
-    return file_names
