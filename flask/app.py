@@ -8,7 +8,9 @@ DESC: the main script to run the flask server.
 print('\n--------------------------------------------------')
 print('\033[94mINFO: \033[0minitializing flask server.\n')
 
+import os
 import threading as th 
+import runpy 
 
 from flask import Flask, request, jsonify, current_app
 from flask_cors import CORS
@@ -48,7 +50,9 @@ app.filesystem_indexer = FilesystemIndexer(
     get_root_directories()[0],                      # start_dir - NOTE: Use the first mounted drive as the default
     config['paths']['METADATA_DB_PATH'],            # metadata_db_path
     config['paths']['INDEX_BIN_PATH'],              # index_bin_path
-    int(config['index']['EMBEDDING_DIM'].strip())   # embedding_dim
+    int(config['index']['EMBEDDING_DIM'].strip()),  # embedding_dim
+    log_filepath=os.path.join(config['paths']['LOGS_DIR'], 'flask_filesystem_indexer.log'),  # log_filepath
+    thread_num=-1   # thread_num - NOTE: use -1 to not interfere w/ bg indexers
 )
 
 # Init an ollama query handler and add to the app
@@ -112,6 +116,22 @@ app.register_blueprint(ai_bp)     # AI Assistant blueprint
 
 # --- Run --- #
 if __name__ == "__main__":
+    
+    # Setup a thread to index the filesystem in the bg
+    def run_indexer(): 
+        runpy.run_path('scripts/index_filesystem.py')
+        
+    # Init thread
+    indexer_thread:th.Thread = th.Thread(
+        target=run_indexer,
+        name='indexer_bg_thread',
+        
+        # NOTE: use daemon to make sure the thread quits if the main program quits
+        daemon=True
+    )
+    
+    # Start the thread 
+    indexer_thread.start()
     
     # Info print
     print(f'\033[92mSUCCESS: \033[0mFlask server running on port {config["flask"]["FLASK_PORT"]}.')
