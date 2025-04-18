@@ -4,6 +4,8 @@ from configparser import ConfigParser
 import threading as th 
 import logging 
 import time 
+import platform 
+import json 
 
 # Modify sys path for util imports 
 import sys
@@ -13,7 +15,7 @@ parent_dir:str = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-from objects import FilesystemIndexer
+from objects import FilesystemIndexer, FileMetadataDatabase
 from utils import get_root_directories, setup_logger
 
 
@@ -38,7 +40,28 @@ logger:logging.Logger = setup_logger(
     'indexer_threads_script_logger'
 )
 
+# Init a db cxn
+metadata_db:FileMetadataDatabase = FileMetadataDatabase(METADATA_DB_PATH)
 
+# Based on the OS, init default dirs to exclude
+# Windows
+if platform.system() == "Windows":
+    
+    # Get the paths to ignore
+    with open('config/default-ignore-paths.json', 'r') as file: 
+        ignore_dirs:list[str] = json.load(file)['Windows']
+    
+# Else is linux/unix/mac
+else: 
+    # Get the paths to ignore
+    with open('config/default-ignore-paths.json', 'r') as file: 
+        ignore_dirs:list[str] = json.load(file)['Linux']
+        
+# Insert each of the paths into the DB
+for p in ignore_dirs: 
+    metadata_db.new_ignored_path(p, 'directory')
+        
+        
 # --- Define func to init and start a FilesystemIndexer for each root dir --- # 
 def init_and_run_indexer(root_dir:str, thread_num:int=0) -> None: 
     """Creates a FilesystemIndexer for the given root directory and starts indexing the downstream files and directories."""
@@ -60,7 +83,7 @@ def init_and_run_indexer(root_dir:str, thread_num:int=0) -> None:
         save_frequency=2,
     )
     
-    
+
 # --- Start threads for each of the root dirs --- #
 # Keep track of the number of threads 
 i:int = 0

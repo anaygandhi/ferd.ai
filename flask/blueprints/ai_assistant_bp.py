@@ -180,7 +180,7 @@ def search_files():
     metadata_db:FileMetadataDatabase = current_app.file_metadata_db
     
     # Search the index for the query
-    # If we're given a TL dir, then we want to filter to just those files in the index 
+    # If we're given a TL dir, then we want to filter to just those files in the index     
     if top_level_dir: 
         
         # Get the IDs for all files that are downstream from the TL dir
@@ -198,12 +198,11 @@ def search_files():
         # Use indexer to get the top K documents that match the query
         top_file_ids:list[str] = filesystem_indexer.search_files(
             user_query,
-            metadata_db.cursor,
             current_app.K
         )
     
     # If no matches are found, then there is no point in submitting to ollama
-    if not top_file_ids: 
+    if len(top_file_ids) == 0: 
         return jsonify({
             'faiss_top_files': [],
             'ollama_response': [],
@@ -213,10 +212,14 @@ def search_files():
                 'context': ''
             }
         })
-        
+    
+    print('GOT TOP FILE IDS: ', top_file_ids)
+    print(type(top_file_ids))
+    
     # Convert the file IDs to abs paths while preserving order
     top_filepaths:list[str] = metadata_db.file_paths_from_ids(top_file_ids)
     
+    print('GOT TOP FILEPATHS: ', top_filepaths)
     # Read each of the files into a dict of { filename : file_content }
     documents_dict:dict[str,str] = {
         filepath : read_file(filepath) for filepath in top_filepaths

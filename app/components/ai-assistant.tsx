@@ -84,8 +84,8 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            query: input, // The search query entered by the user
-            start_dir: searchDirectory || "/", // The directory to start the search from, defaults to root
+            query: input,                     // The search query entered by the user
+            start_dir: searchDirectory || "", // The directory to start the search from, defaults to root
           }),
         });
 
