@@ -101,54 +101,57 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
   };
 
   return (
-    <div className="w-80 border-l bg-background flex flex-col h-full">
+    <div className="w-full sm:w-80 border-l bg-background flex flex-col h-full">
       <Card className="h-full rounded-none border-0 flex flex-col">
         {/* Header */}
         <CardHeader className="flex flex-col space-y-2 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bot className="h-5 w-5 text-primary" />
-              <CardTitle className="text-base">AI Assistant</CardTitle>
+              <div>
+                <CardTitle className="text-lg font-semibold">AI Assistant</CardTitle>
+                <p className="text-sm text-muted-foreground">Your intelligent file assistant</p>
+              </div>
             </div>
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>
           </div>
-
-          {/* Query Type Buttons */}
-          <div className="flex flex-col gap-2 px-2 py-2">
-            <Button
-              variant={queryType === "general" ? "secondary" : "ghost"}
-              size="sm"
-              className={`w-full text-center ${
-                queryType === "general" ? "ring-2 ring-primary ring-offset-2" : ""
-              }`}
-              onClick={() => setQueryType("general")}
-            >
-              General Queries
-            </Button>
-            <Button
-              variant={queryType === "search" ? "secondary" : "ghost"}
-              size="sm"
-              className={`w-full text-center ${
-                queryType === "search" ? "ring-2 ring-primary ring-offset-2" : ""
-              }`}
-              onClick={() => setQueryType("search")}
-            >
-              Search for a File
-            </Button>
-            <Button
-              variant={queryType === "summarize" ? "secondary" : "ghost"}
-              size="sm"
-              className={`w-full text-center ${
-                queryType === "summarize" ? "ring-2 ring-primary ring-offset-2" : ""
-              }`}
-              onClick={() => setQueryType("summarize")}
-            >
-              File Summarization
-            </Button>
-          </div>
         </CardHeader>
+
+        {/* Query Type Buttons */}
+        <div className="flex flex-col gap-4 px-4 py-3">
+          <Button
+            variant={queryType === "general" ? "secondary" : "ghost"}
+            size="sm"
+            className={`w-full text-center ${
+              queryType === "general" ? "ring-2 ring-primary ring-offset-2" : ""
+            }`}
+            onClick={() => setQueryType("general")}
+          >
+            General Queries
+          </Button>
+          <Button
+            variant={queryType === "search" ? "secondary" : "ghost"}
+            size="sm"
+            className={`w-full text-center ${
+              queryType === "search" ? "ring-2 ring-primary ring-offset-2" : ""
+            }`}
+            onClick={() => setQueryType("search")}
+          >
+            Search for a File
+          </Button>
+          <Button
+            variant={queryType === "summarize" ? "secondary" : "ghost"}
+            size="sm"
+            className={`w-full text-center ${
+              queryType === "summarize" ? "ring-2 ring-primary ring-offset-2" : ""
+            }`}
+            onClick={() => setQueryType("summarize")}
+          >
+            File Summarization
+          </Button>
+        </div>
 
         {/* Chat Content */}
         <CardContent className="flex-1 p-0 overflow-hidden">
@@ -157,7 +160,7 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
               {messages.map((message, index) => (
                 <div key={index} className={`flex ${message.role === "assistant" ? "justify-start" : "justify-end"}`}>
                   <div
-                    className={`rounded-lg px-3 py-2 text-sm ${
+                    className={`rounded-lg px-3 py-2 text-sm shadow ${
                       message.role === "assistant" ? "bg-muted text-foreground" : "bg-primary text-primary-foreground"
                     } max-w-[90%]`}
                   >
@@ -222,6 +225,7 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
                     onChange={(e) => setSearchDirectory(e.target.value)}
                     className="flex-1"
                     disabled={loading}
+                    title="Optional: Specify a directory to narrow your search."
                   />
                   <label className="text-sm text-muted-foreground">Search Query</label>
                   <Input
@@ -231,6 +235,7 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
                     onKeyDown={(e) => e.key === "Enter" && handleSend()}
                     className="flex-1"
                     disabled={loading}
+                    title="Enter the file name or keywords to search."
                   />
                 </div>
                 <Button size="icon" onClick={handleSend} disabled={loading}>
