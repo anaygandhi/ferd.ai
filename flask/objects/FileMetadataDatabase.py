@@ -277,6 +277,16 @@ class FileMetadataDatabase:
         return self.table_as_df('ignored_paths').to_dict(orient='records')
     
     
+    def del_ignored_path(self, path:str) -> None: 
+        """Deletes the given path from the "ignored_paths" database if it exists."""
+        
+        # Execute query
+        self.cursor.execute(
+            "DELETE FROM ignored_paths WHERE path = ?",
+            (path,)
+        )
+
+        
     # --- Other utils --- #
     def table_as_df(self, table_name:str) -> pd.DataFrame: 
         """Returns the given table as a DataFrame."""
