@@ -35,6 +35,39 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
     setLoading(true);
 
     try {
+      // Validation for "summarize" query type
+      if (queryType === "summarize") {
+        // Check if the input is an absolute path
+        const isAbsolutePath = input.startsWith("/") || /^[a-zA-Z]:\\/.test(input); // Unix or Windows absolute path
+        if (!isAbsolutePath) {
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: "The provided path is not an absolute path. Please enter a valid absolute path." },
+          ]);
+          setLoading(false);
+          return; // Stop execution here
+        }
+
+        // Check if the path exists on the file system
+        const pathExists = await fetch(`/api/check-path`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ path: input }),
+        }).then((res) => res.json());
+
+        if (!pathExists.exists) {
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: "The provided path does not exist on the file system. Please enter a valid path." },
+          ]);
+          setLoading(false);
+          return; // Stop execution here
+        }
+      }
+
+      // Send the query to the model
       const action = "generate"; // Default action for all query types
       const params = { prompt: input }; // Default parameters
 
@@ -146,21 +179,56 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
         {/* Input Box */}
         <CardFooter className="p-3">
           <div className="flex w-full items-center gap-2">
-            <Input
-              placeholder="Ask a question..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              className="flex-1"
-              disabled={loading}
-            />
-            <Button size="icon" onClick={handleSend} disabled={loading}>
-              <Send className="h-4 w-4" />
-            </Button>
+            {queryType === "general" && (
+              <>
+                <Input
+                  placeholder="Ask a question..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                  className="flex-1"
+                  disabled={loading}
+                />
+                <Button size="icon" onClick={handleSend} disabled={loading}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+
+            {queryType === "summarize" && (
+              <>
+                <Input
+                  placeholder="Enter an absolute file path..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                  className="flex-1"
+                  disabled={loading}
+                />
+                <Button size="icon" onClick={handleSend} disabled={loading}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+
+            {queryType === "search" && (
+              <>
+                <Input
+                  placeholder="Search for a file..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                  className="flex-1"
+                  disabled={loading}
+                />
+                <Button size="icon" onClick={handleSend} disabled={loading}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </>
+            )}
           </div>
         </CardFooter>
       </Card>
     </div>
   );
 }
-
