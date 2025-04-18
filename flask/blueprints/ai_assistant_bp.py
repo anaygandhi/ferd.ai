@@ -1,12 +1,9 @@
 from flask import Blueprint, jsonify, request, current_app 
 import requests 
 import os 
-import json 
-import sqlite3 as sql
 
-from utils import extract_json, read_file, search_files, tokenize_no_stopwords
+from utils import extract_json, read_file, tokenize_no_stopwords
 from objects import OllamaQueryHandler, FilesystemIndexer, FileMetadataDatabase
-import faiss 
 
 
 # --- Config --- #
