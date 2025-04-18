@@ -188,27 +188,19 @@ class FileMetadataDatabase:
         
     def check_path_ignored(self, path:str) -> bool: 
         """Checks if the given path is ignored. NOTE: the path must actually exist in the filesystem and should be an absolute path."""
-        
-        print('Got path: ', path)
-        
+                
         # Normalize the path 
         path = normalize_path(path) 
-        
-        print('Normalized path: ', path) 
-        
+                
         # Make sure the path exists, return False if not
         if not os.path.exists(path): return False
-        
-        print('PATH EXISTS') 
-        
+                
         # Check if the path is a file or directory to optimize the query
         if os.path.isdir(path): 
             t:str = 'directory'
         else: 
             t:str = 'file'
-        
-        print('Got path type: ', t)
-        
+                
         # Execute select query
         self.cursor.execute(
             "SELECT 1 FROM ignore_paths WHERE type = ? AND ? GLOB path LIMIT 1", 
@@ -217,9 +209,7 @@ class FileMetadataDatabase:
         
         # Fetch results
         result:int = self.cursor.fetchone()
-        
-        print('Got result: ', result)
-        
+                
         # Check if we got a direct match
         if result and result[0] > 0: return True    
         
@@ -241,13 +231,8 @@ class FileMetadataDatabase:
                     (parent,)
                 )
                 
-                # Fetch result
-                result:tuple = self.cursor.fetchone()
-                
-                # Handle result
-                if result:
-                    print(f'Parent directory {parent} is ignored')
-                    return True
+                # Return true if there is a result (i.e. this parent is ignored)                
+                if self.cursor.fetchone(): return True
                 
                 # If no match, get the parent dir of this dir
                 new_parent:str = os.path.dirname(parent)
@@ -259,7 +244,6 @@ class FileMetadataDatabase:
                 parent = new_parent
 
         # False if we make it here
-        print('No ignore match found')
         return False
     
         

@@ -18,7 +18,7 @@ class FilesystemIndexer:
     logger:logging.Logger                    # Logger for saving robust logs
     
     
-    def __init__(self, start_dir:str, metadata_db_path:str, index_bin_path:str, embedding_dim:int, log_filepath:str='logs/filesystem_indexer.log'): 
+    def __init__(self, start_dir:str, metadata_db_path:str, index_bin_path:str, embedding_dim:int, log_filepath:str='logs/filesystem_indexer.log', thread_num:int=0): 
         self.start_dir = start_dir
         self.file_metadata_db = FileMetadataDatabase(metadata_db_path)
         self.index_bin_path = index_bin_path
@@ -28,8 +28,11 @@ class FilesystemIndexer:
         # Set up a logger for the FilesystemIndexer
         self.logger = setup_logger(
             log_filepath,
-            'filesystem_indexer'
+            f'filesystem_indexer_{thread_num}'
         )
+        
+        # Initial log that the indexer was init'd
+        self.logger.debug(f'in __init__() - FilesystemIndexer initialized with [start_dir] = "{start_dir}", [metadata_db_path] = "{metadata_db_path}", [index_bin_path] = "{index_bin_path}"')
         
     
     def index_filesystem(self, overwrite:bool=False, verbose:bool=False, save_frequency:int=2) -> None: 
@@ -99,6 +102,14 @@ class FilesystemIndexer:
             # Iterate over all the files in this dir
             for file in files:
                 
+                # Check the file extension and ignore invalid files
+                if not file.endswith(('.pdf', '.docx', '.txt')): 
+                    
+                    # Info print & log and do not index the file
+                    if verbose: print_log('INFO', 'index_filesystem()', f'Ignoring file (invalid extension) "{file}".')
+                    self.logger.info(f'in index_filesystem() - ignoring file (invalid extension) "{file}".')
+                    continue  
+        
                 # Construct the full filepath
                 full_path = os.path.join(root, file)
 
@@ -118,11 +129,12 @@ class FilesystemIndexer:
                     self.logger.info(f'in index_filesystem() - FAISS index saved to "{self.index_bin_path}" (save_frequency = 3)')
                     
             # Save after dir index if configured (level 2) 
-            faiss.write_index(index, self.index_bin_path)
-            if verbose: print_log('SUCCESS', 'FilesystemIndexer.index_filesystem()', f'FAISS index saved to "{self.index_bin_path}"') 
-            self.logger.info(f'in index_filesystem() - FAISS index saved to "{self.index_bin_path}" (save_frequency = 2)')
+            if save_frequency == 2: 
+                faiss.write_index(index, self.index_bin_path)
+                if verbose: print_log('SUCCESS', 'FilesystemIndexer.index_filesystem()', f'FAISS index saved to "{self.index_bin_path}"') 
+                self.logger.info(f'in index_filesystem() - FAISS index saved to "{self.index_bin_path}" (save_frequency = 2)')
             
-        # Save after filesystem is indexed if configured (level 1) 
+        # ALWAYS save after filesystem is indexed (level 1) 
         faiss.write_index(index, self.index_bin_path)
         if verbose: print_log('SUCCESS', 'FilesystemIndexer.index_filesystem()', f'FAISS index saved to "{self.index_bin_path}"') 
         self.logger.info(f'in index_filesystem() - FAISS index saved to "{self.index_bin_path}" (save_frequency = 1)')
@@ -142,14 +154,6 @@ class FilesystemIndexer:
             Returns: 
                 None: saves the metadata in the SQLite DB and the embeddings in the index.
         """
-        
-        # Check the file extension and ignore invalid files
-        if not filepath.endswith(('.pdf', '.docx', '.txt')): 
-            
-            # Info print & log and do not index the file
-            if verbose: print_log('INFO', 'index_file()', f'Ignoring file (invalid extension) "{filepath}".')
-            self.logger.info(f'in index_file() - ignoring file (invalid extension) "{filepath}".')
-            return  
 
         try:
             

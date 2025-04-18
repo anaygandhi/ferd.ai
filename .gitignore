@@ -1,17 +1,27 @@
-test.pdf
-test.docx
-test.txt
+
+# Data files
+*.db
+*.bin
+
+# Venvs
+venv/
+*.venv
+
+# Caches
+*.vscode
+*__pycache__*
+*.pytest_cache
+
+# Logs
+flask/logs/*
+
+# Other 
 *.pyc
 *.pyo
 access_token.txt
 models/*.gguf
 llama-cpp-python-anay/*
 test_dir/*
-*.db
-*.bin
-*__pycache__*
-venv/
 *.ipynb
-*.vscode
-*.venv
-*.pytest_cache
+
+
