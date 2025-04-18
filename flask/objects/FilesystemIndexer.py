@@ -25,14 +25,18 @@ class FilesystemIndexer:
         self.sentence_transformer = SentenceTransformer('all-MiniLM-L6-v2')  
         
     
-    def index_filesystem(self, overwrite:bool=False, verbose:bool=False) -> None: 
+    def index_filesystem(self, overwrite:bool=False, verbose:bool=False, save_frequency:int=2) -> None: 
         """Indexes the filesystem starting at [self.start_dir] and recursively traverses child directories. 
         
             Parameters: 
                 overwrite (bool, optional): "True" means that if the index & DB exist already then they will be overwritten from scratch; "False" means that only changed files
                     will be updated (i.e. where the stored hash does not match the computed hash). If the index does not exist, then it will be created in either case. Defaults to False. 
                 verbose (bool, optional): "True" means print debug info; "False" means silent run and print only fatal errors. Defaults to False. 
-                
+                save_frequency (int, optional): the frequency to save the index. Must be one of [1, 2, 3], where: 
+                    1 => save at the end only (after all dirs are indexed)
+                    2 (default) => save after each directory iteration (each time a new directory is entered)
+                    3 => save after each file is indexed (every time a new file is read - can be overkill and impact performance)
+                    
             Returns: 
                 None: updates/creates the faiss index and db at [self.index_bin_path] and [self.metadata_db_path] respectively. 
         """
@@ -64,11 +68,18 @@ class FilesystemIndexer:
             else: index:faiss.IndexFlatL2 = faiss.IndexFlatL2(self.embedding_dim)
             
         # ---- Indexing ---- #
-        # Iterate over all the child dirs in [self.start_dir] and recursively index each file
-        if verbose: 
-            print_log('INFO', 'Filesystem.index_filesystem()', f'Starting indexing from "{self.start_dir}". Files: {os.listdir(self.start_dir)}')
+        # Info print
+        if verbose: print_log('INFO', 'Filesystem.index_filesystem()', f'Starting indexing from "{self.start_dir}". Files: {os.listdir(self.start_dir)}')
         
+        # Iterate over all the child dirs in [self.start_dir] and recursively index each file
         for root, dirs, files in os.walk(self.start_dir):
+            
+            # Check if this dir is ignored 
+            if self.file_metadata_db.check_path_ignored(root): 
+                
+                # Info print and do nothing else 
+                if verbose: print_log('INFO', 'FilesystemIndexer.index_filesystem()', f'Skipping directory "{root}" because the path is ignored in DB.')
+                continue 
             
             # Info print 
             if verbose: print_log('INFO', 'FilesystemIndexer.index_filesystem()', f'Reading {len(files)} from {root}.')
@@ -86,11 +97,19 @@ class FilesystemIndexer:
                     verbose=verbose
                 )
                 
-        # Save the index
-        faiss.write_index(index, self.index_bin_path)
-        print_log('SUCCESS', 'FilesystemIndexer.index_filesystem()', f'FAISS index saved to "{self.index_bin_path}"') 
+                # Save after file index if configured (level 3)
+                if save_frequency == 3: 
+                    faiss.write_index(index, self.index_bin_path)
+                    if verbose: print_log('SUCCESS', 'FilesystemIndexer.index_filesystem()', f'FAISS index saved to "{self.index_bin_path}"') 
+            
+            # Save after dir index if configured (level 2) 
+            faiss.write_index(index, self.index_bin_path)
+            if verbose: print_log('SUCCESS', 'FilesystemIndexer.index_filesystem()', f'FAISS index saved to "{self.index_bin_path}"') 
                 
-    
+        # Save after filesystem is indexed if configured (level 1) 
+        faiss.write_index(index, self.index_bin_path)
+        if verbose: print_log('SUCCESS', 'FilesystemIndexer.index_filesystem()', f'FAISS index saved to "{self.index_bin_path}"') 
+            
     def index_file(self, filepath:str, index:faiss.IndexFlatL2, verbose:bool=False) -> None: 
         """Reads the file at the given path, extracts the metadata and other info, hashes the file, and stores the results in the
         given sql DB using the connection and cursor, and stores the embedding in the given index.
@@ -114,6 +133,16 @@ class FilesystemIndexer:
             return  
 
         try:
+            
+            # Check if this path is ignored 
+            if self.file_metadata_db.check_path_ignored(filepath): 
+                
+                # Info print 
+                if verbose: print_log('INFO', 'index_file()', f'Ignoring file (path ignored in DB) "{filepath}".')
+                
+                # Do nothing else 
+                return  
+            
             # Hash the file 
             file_hash:str = hash_file_sha256(filepath)
 
