@@ -2,7 +2,7 @@
 # Data files
 *.db
 *.bin
-
+*.db-journal
 # Venvs
 venv/
 *.venv
