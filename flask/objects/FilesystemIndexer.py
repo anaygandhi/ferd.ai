@@ -257,7 +257,7 @@ class FilesystemIndexer:
         self.logger.info(f'in search_files() - search for "{query}" completed with matched file IDs: {indices}.')
         
         # Return the matched indices
-        return indices
+        return list([int(i) for i in indices[0]])
     
 
     def search_subset(self, query:str, file_ids_to_include:list[int], top_k:int=5) -> list[int]:
