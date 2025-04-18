@@ -1,5 +1,5 @@
 "use client"
-import React from "react"
+import React, { useRef, useEffect } from "react"
 import { useState } from "react"
 import { Bot, Send, X } from "lucide-react"
 import { Button } from "./ui/button"
@@ -22,8 +22,17 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [queryType, setQueryType] = useState<"general" | "search" | "summarize">("general"); // Track query type
+  const [queryType, setQueryType] = useState<"general" | "search" | "summarize">("general");
   const [searchDirectory, setSearchDirectory] = useState("");
+
+  const chatContainerRef = useRef<HTMLDivElement>(null); // Reference for the chat container
+
+  // Scroll to the bottom whenever messages change
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages, loading]);
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -85,7 +94,7 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
       }
 
       const data = await response.json();
-      const aiResponse = data.response || "Sorry, I couldn't process your request.";
+      const aiResponse = data.ollama_response || "Sorry, I couldn't process your request.";
 
       // Add assistant's response
       setMessages((prev) => [...prev, { role: "assistant", content: aiResponse }]);
@@ -155,7 +164,7 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
 
         {/* Chat Content */}
         <CardContent className="flex-1 p-0 overflow-hidden">
-          <ScrollArea className="h-full">
+          <ScrollArea className="h-full" ref={chatContainerRef}>
             <div className="flex flex-col gap-3 p-4">
               {messages.map((message, index) => (
                 <div key={index} className={`flex ${message.role === "assistant" ? "justify-start" : "justify-end"}`}>

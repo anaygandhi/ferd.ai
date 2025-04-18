@@ -58,7 +58,14 @@ export function FileItem({ file, viewMode, onOpen, onDelete, onSelect, isSelecte
 
   const handleFileClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering parent events
-    onOpen(); // Trigger the onOpen handler
+    onSelect(!isSelected); // Toggle selection state
+  };
+
+  const handleFileDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering parent events
+    if (file.isDirectory) {
+      onOpen(); // Open the directory on double-click
+    }
   };
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,22 +153,23 @@ export function FileItem({ file, viewMode, onOpen, onDelete, onSelect, isSelecte
       <ContextMenuTrigger>
         <div
           className={`group flex cursor-pointer flex-col items-center rounded-lg p-2 transition-colors ${
-            isSelected ? "bg-primary/10" : "hover:bg-muted"
+            isSelected ? "bg-primary/10 border-2 border-blue-500" : "hover:bg-muted border"
           }`}
-          onClick={handleFileClick} // Trigger onOpen on click
+          onClick={handleFileClick} // Single click toggles selection
+          onDoubleClick={handleFileDoubleClick} // Double click opens the directory
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          <div className="relative mb-2 flex h-24 w-24 items-center justify-center rounded-md border bg-background p-2">
+          <div className="relative mb-2 flex h-24 w-24 items-center justify-center rounded-md bg-background p-2">
             {getFileIcon()}
             {(isSelected || isHovered) && (
-                <div className="absolute top-1 left-1">
+              <div className="absolute top-1 left-1">
                 <Checkbox
-                  checked={isSelected}
-                  onChange={(e) => handleCheckboxChange(e as React.ChangeEvent<HTMLInputElement>)} // Trigger onSelect on checkbox change
+                  checked={isSelected} // Sync checkbox state with isSelected
+                  onChange={(e) => handleCheckboxChange(e as React.ChangeEvent<HTMLInputElement>)} // Handle checkbox change
                   onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()} // Prevent checkbox click from triggering onOpen
                 />
-                </div>
+              </div>
             )}
           </div>
           <div className="w-full text-center">
@@ -179,16 +187,17 @@ export function FileItem({ file, viewMode, onOpen, onDelete, onSelect, isSelecte
       <ContextMenuTrigger>
         <div
           className={`group flex cursor-pointer items-center justify-between px-4 py-2 transition-colors ${
-            isSelected ? "bg-primary/10" : "hover:bg-muted"
+            isSelected ? "bg-primary/10 border-l-4 border-blue-500" : "hover:bg-muted"
           }`}
-          onClick={handleFileClick} // Trigger onOpen on click
+          onClick={handleFileClick} // Single click toggles selection
+          onDoubleClick={handleFileDoubleClick} // Double click opens the directory
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
           <div className="flex items-center gap-3">
             <Checkbox
-              checked={isSelected}
-              onChange={(e) => handleCheckboxChange(e as React.ChangeEvent<HTMLInputElement>)} // Trigger onSelect on checkbox change
+              checked={isSelected} // Sync checkbox state with isSelected
+              onChange={(e) => handleCheckboxChange(e as React.ChangeEvent<HTMLInputElement>)} // Handle checkbox change
               onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()} // Prevent checkbox click from triggering onOpen
             />
             {getFileIcon()}
