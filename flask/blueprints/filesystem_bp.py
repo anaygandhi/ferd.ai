@@ -31,10 +31,18 @@ def check_path_exists():
     # Normalize the path format 
     norm_path:str = normalize_path(path)
     
-    # Check if the path exists and return 
+    # Check if the path exists and get the type if it does 
+    path_exists:bool = os.path.exists(os.path.exists(norm_path))
+
+    if path_exists: 
+        path_type:str = 'directory' if os.path.isdir(norm_path) else 'file'
+    else: 
+        path_type:str = ''
+        
+    # Format and return 
     return jsonify({
-        'path_exists': os.path.exists(norm_path),
-        'path_type': 'directory' if os.path.isdir(norm_path) else 'file'
+        'path_exists': path_exists,
+        'path_type': path_type
     })
     
     
