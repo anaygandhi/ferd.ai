@@ -8,7 +8,8 @@ DESC: the main script to run the flask server.
 print('\n--------------------------------------------------')
 print('\033[94mINFO: \033[0minitializing flask server.\n')
 
-import sqlite3 as sql
+import threading as th 
+
 from flask import Flask, request, jsonify, current_app
 from flask_cors import CORS
 from gevent.pywsgi import WSGIServer
@@ -111,6 +112,25 @@ app.register_blueprint(ai_bp)     # AI Assistant blueprint
 
 # --- Run --- #
 if __name__ == "__main__":
+    
+    # Init a thread to index the filesystem in the background
+    indexer_thread:th.Thread = th.Thread(
+        name='FilesystemIndexer_Thread',
+        target=app.filesystem_indexer.index_filesystem,
+        kwargs={
+            'overwrite': False,
+            'verbose': False,
+            'save_frequency':2
+        },
+        
+        # NOTE: use daemon to make sure the thread exists if the program is killed or crashes 
+        daemon=True    
+    )
+    
+    # Start the indexer thread 
+    indexer_thread.start()
+    
+    # Info print
     print(f'\033[92mSUCCESS: \033[0mFlask server running on port {config["flask"]["FLASK_PORT"]}.')
     
     # Create and serve the WSGI server

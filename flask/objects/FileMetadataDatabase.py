@@ -40,16 +40,7 @@ class FileMetadataDatabase:
             self.cxn.commit()
                 
     
-    def get_table_columns(self, table_name:str) -> list[str]: 
-        """Returns the columns for the given table name."""
-        
-        # Execute query
-        self.cursor.execute(f'PRAGMA table_info({table_name})')
-        
-        # Return results
-        return [c[1] for c in self.cursor.fetchall()]
-    
-        
+    # --- Funcs relating to the "file_metadata" table --- # 
     def check_file_exists(self, filepath:str) -> dict|None: 
         """Checks if the given filepath exists in the DB's "file_metadata" table, and returns that row as a dict if it does.""" 
             
@@ -108,20 +99,65 @@ class FileMetadataDatabase:
         # Commit changes
         self.cxn.commit()
         
+    
+    def file_paths_from_ids(self, ids:list[int]) -> list[str]: 
+        """Returns the path for the file with the given ID, while preserving the order of the passed IDs."""
         
-    def table_as_df(self, table_name:str) -> pd.DataFrame: 
-        """Returns the given table as a DataFrame."""
+        # Check that IDs are actually given
+        if not ids: return []
         
-        # Execute select query for the table
-        self.cursor.execute(f'SELECT * FROM {table_name}')
+        # Construct the VALUES clause for the query
+        values_clause:str = ','.join('(?, ?)' for _ in ids)
         
-        # Fetch all results and create a df, and return
-        return pd.DataFrame(
-            self.cursor.fetchall(),
-            columns=self.get_table_columns(table_name)
+       # Flatten (id, index) pairs for parameters
+        params:list[int] = [item for pair in zip(ids, range(len(ids))) for item in pair] 
+
+        # Construct the query
+        query = f"""
+            WITH input_order(id, ord) AS (
+                VALUES {values_clause}
+            )
+            SELECT io.ord, fmd.file_path
+            FROM input_order io
+            LEFT JOIN file_metadata fmd ON fmd.id = io.id
+            ORDER BY io.ord
+        """
+        
+        # Execute the query
+        self.cursor.execute(query, params)
+        
+        # Fetch results
+        rows:list[tuple] = self.cursor.fetchall()
+        
+        # NOTE: Since we SELECT ord, we can reconstruct the full list with None for missing paths
+        # Init a list of all None vals to hold the results
+        result:list[str|None] = [None] * len(ids)
+        
+        # Iterate over each of the result tuples (in order) and insert the path for each index
+        for ord_index, file_path in rows:
+            result[ord_index] = file_path
+
+        # Return the resulting list of strings
+        return result
+
+    
+    def get_file_ids_by_path_prefix(self, top_level_path: str) -> list[int]:
+        """Returns the IDs of all files that are downstream from the given top level path."""
+        
+        # Ensure the path ends with a separator so it's not just a prefix match
+        path_prefix:str = top_level_path.rstrip(os.sep) + os.sep + '%'
+
+        # Execute the query
+        self.cursor.execute(
+            "SELECT id FROM file_metadata WHERE file_path LIKE ?", 
+            (path_prefix,)
         )
         
-    
+        # Fetch results and return 
+        return [row[0] for row in self.cursor.fetchall()]
+
+
+    # --- Funcs relating to the "ignore_paths" table --- #     
     def new_ignored_path(self, path:str, type:str) -> None: 
         """Creates a new entry in the "ignored_paths" table for the given path."""
         
@@ -255,3 +291,27 @@ class FileMetadataDatabase:
         
         # Use the table_as_df util to get the ignored_paths table as a df, orient to a list of dict, and return
         return self.table_as_df('ignored_paths').to_dict(orient='records')
+    
+    
+    # --- Other utils --- #
+    def table_as_df(self, table_name:str) -> pd.DataFrame: 
+        """Returns the given table as a DataFrame."""
+        
+        # Execute select query for the table
+        self.cursor.execute(f'SELECT * FROM {table_name}')
+        
+        # Fetch all results and create a df, and return
+        return pd.DataFrame(
+            self.cursor.fetchall(),
+            columns=self.get_table_columns(table_name)
+        )
+    
+    
+    def get_table_columns(self, table_name:str) -> list[str]: 
+        """Returns the columns for the given table name."""
+        
+        # Execute query
+        self.cursor.execute(f'PRAGMA table_info({table_name})')
+        
+        # Return results
+        return [c[1] for c in self.cursor.fetchall()]
