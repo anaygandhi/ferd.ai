@@ -5,7 +5,7 @@ import json
 import sqlite3 as sql
 
 from utils import extract_json, read_file, search_files, tokenize_no_stopwords
-from objects import OllamaQueryHandler
+from objects import OllamaQueryHandler, FilesystemIndexer, FileMetadataDatabase
 import faiss 
 
 
@@ -146,7 +146,8 @@ def search_files():
         The request body should look like: 
         
         { 
-            "query": "<some query>"
+            "query": "<some query>",
+            "start_dir": "/top/level/dir/to/search/from/"
         }
         
     RETURNS: 
@@ -174,30 +175,24 @@ def search_files():
             "error": f"Missing 'query'). Given: {request_json}"
         }), 400
 
-    # Use Faiss index to get the top 3 documents that match the query
-    # Load the Faiss index
-    index:faiss.IndexFlatL2 = faiss.read_index(current_app.INDEX_BIN_PATH)
+    # Check if given a TL dir to start search from
+    top_level_dir:str = request_json.get('start_dir', '')
 
-    # Get the top 3 documents
-    top_files:list[str] = search_files(
-        user_query, 
-        current_app.sentence_transformer_model,
-        current_app.EMBEDDING_DIM,
-        index,
-        current_app.db_cursor,
-        top_k=current_app.K
+    # Get the indexer and the metadata db from the current app
+    filesystem_indexer:FilesystemIndexer = current_app.filesystem_indexer
+    metadata_db:FileMetadataDatabase = current_app.file_metadata_db
+    
+    # Use indexer to get the top 3 documents that match the query
+    top_file_ids:list[str] = filesystem_indexer.search_files(
+        user_query,
+        metadata_db.cursor,
+        current_app.K,
+        top_level_dir=top_level_dir
     )
-
-    # Convert the file names to absolute paths 
-    top_filepaths:list[str] = current_app.db_cursor.execute(
-        f"""
-            SELECT file_path 
-            FROM file_metadata 
-            WHERE file_name IN ({','.join(['%s' for _ in top_files])})
-        """,
-        top_files
-    )
-
+    
+    # Convert the file IDs to abs paths while preserving order
+    top_filepaths:list[str] = metadata_db.file_paths_from_ids(top_file_ids)
+    
     # Read each of the files into a dict of { filename : file_content }
     documents_dict:dict[str,str] = {
         filepath : read_file(filepath) for filepath in top_filepaths
