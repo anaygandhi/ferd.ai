@@ -140,7 +140,23 @@ class FileMetadataDatabase:
         # Return the resulting list of strings
         return result
 
+    
+    def get_file_ids_by_path_prefix(self, top_level_path: str) -> list[int]:
+        """Returns the IDs of all files that are downstream from the given top level path."""
         
+        # Ensure the path ends with a separator so it's not just a prefix match
+        path_prefix:str = top_level_path.rstrip(os.sep) + os.sep + '%'
+
+        # Execute the query
+        self.cursor.execute(
+            "SELECT id FROM file_metadata WHERE file_path LIKE ?", 
+            (path_prefix,)
+        )
+        
+        # Fetch results and return 
+        return [row[0] for row in self.cursor.fetchall()]
+
+
     # --- Funcs relating to the "ignore_paths" table --- #     
     def new_ignored_path(self, path:str, type:str) -> None: 
         """Creates a new entry in the "ignored_paths" table for the given path."""
