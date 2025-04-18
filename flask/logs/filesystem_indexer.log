@@ -1,6 +1,0 @@
-2025-04-17 23:12:44,654 - INFO: in index_filesystem() - reading existing index at "index/faiss_index.bin".
-2025-04-17 23:12:44,679 - INFO: in index_filesystem() - starting indexing from "/"
-2025-04-17 23:12:44,692 - INFO: in index_filesystem() - reading 2 from /.
-2025-04-17 23:12:44,692 - INFO: in index_file() - ignoring file (invalid extension) "/.file".
-2025-04-17 23:12:44,692 - INFO: in index_file() - ignoring file (invalid extension) "/.VolumeIcon.icns".
-2025-04-17 23:12:44,693 - INFO: in index_filesystem() - FAISS index saved to "index/faiss_index.bin" (save_frequency = 2)
