@@ -3,8 +3,9 @@ import os
 import sqlite3 as sql
 import numpy as np 
 import pandas as pd 
+import logging 
 
-from utils import normalize_path
+from utils import normalize_path, setup_logger
 
 
 class FileMetadataDatabase: 
@@ -13,16 +14,21 @@ class FileMetadataDatabase:
     cxn:sql.Connection          # Connection to the db
     cursor:sql.Cursor           # Cursor for the db
     create_tables_script:str    # Path to the sql script to create the tables for the db
-    
-    
-    def __init__(self, db_path:str, create_tables_script:str='sql/metadata_db_tables.sql'): 
-        self.db_path = db_path
+    logger:logging.Logger       # Logger for the DB
         
+    
+    def __init__(self, db_path:str, create_tables_script:str='sql/metadata_db_tables.sql', log_filepath:str='logs/file_metadata_database.log', thread_num:int=0): 
+        self.db_path = db_path
+        self.logger = setup_logger(log_filepath, f'file_metadata_db_{thread_num}')    
+           
         # If the db already exists, make a cxn and cursor
         if os.path.exists(db_path): 
             self.cxn = sql.connect(db_path)
             self.cursor = self.cxn.cursor()
             
+            # Log 
+            self.logger.info(f'in __init__() - initialized connection to existing database at "{db_path}"')
+        
         # If the db doesn't exist, create it and create the tables 
         else: 
             # Create the dir if it doesn't exist
@@ -38,12 +44,18 @@ class FileMetadataDatabase:
                 
             # Commit changes
             self.cxn.commit()
-                
+            
+            # Log
+            self.logger.info(f'in __init__() - created a new database file at "{db_path}"')
+                    
     
     # --- Funcs relating to the "file_metadata" table --- # 
     def check_file_exists(self, filepath:str) -> dict|None: 
         """Checks if the given filepath exists in the DB's "file_metadata" table, and returns that row as a dict if it does.""" 
-            
+        
+        # Log
+        self.logger.info(f'in check_file_exists() - checking for file path "{filepath}"')
+        
         # Execute SELECT query for the given filepath
         self.cursor.execute('SELECT * FROM file_metadata WHERE file_path = ?', (filepath,)) 
         
@@ -53,28 +65,38 @@ class FileMetadataDatabase:
         # Process result and return
         # GOT result 
         if result: 
+            
+            # Log result and return 
+            self.logger.info(f'in check_file_exists() - got result: {result}')
+            
             return {
                 col : val 
                 for col,val in zip(self.get_table_columns('file_metadata'), result)
             }    
             
         # NO result
-        else: 
+        else:
+            self.logger.info(f'in check_file_exists() - no results found for "{filepath}"') 
             return None
         
     
     def delete_file_entry(self, filepath:str) -> None: 
         """Deletes the entry for the given filepath from the "file_metadata" table."""
-        
+                
         # Execute query
+        self.logger.info(f'in delete_file_entry() - deleting metadata entry for "{filepath}"')
         self.cursor.execute("DELETE FROM file_metadata WHERE file_path == %s", (filepath,))
         
         # Commit changes
         self.cxn.commit()
+        self.logger.info(f'in delete_file_entry() - transaction completed for "{filepath}"')
         
-        
+           
     def new_file_entry(self, filepath:str, filename:str, metadata:dict, file_hash:str, embedding_array:np.ndarray) -> None: 
         """Creates a new row in the "file_metadata" table with the given information."""
+        
+        # Log
+        self.logger.info(f'in new_file_entry() - creating a new entry for "{filepath}"')
         
         # Normalize the filepath 
         filepath = normalize_path(filepath)
@@ -97,14 +119,20 @@ class FileMetadataDatabase:
         )
     
         # Commit changes
+        self.logger.info(f'in new_file_entry() - transaction completed for new entry "{filepath}"')
         self.cxn.commit()
         
     
     def file_paths_from_ids(self, ids:list[int]) -> list[str]: 
-        """Returns the path for the file with the given ID, while preserving the order of the passed IDs."""
+        """Returns the paths for the files with the given IDs, while preserving the order of the passed IDs."""
+        
+        # Log
+        self.logger.info(f'in file_paths_from_ids() - retrieving paths for {len(ids)} IDs.')
         
         # Check that IDs are actually given
-        if len(ids) == 0: return []
+        if len(ids) == 0: 
+            self.logger.warning('in file_paths_from_ids() - not given any IDs (len == 0).')
+            return []
         
         # Construct the VALUES clause for the query
         values_clause:str = ','.join('(?, ?)' for _ in ids)
@@ -138,11 +166,15 @@ class FileMetadataDatabase:
             result[ord_index] = file_path
 
         # Return the resulting list of strings
+        self.logger.info(f'in file_paths_from_ids() - transaction for {len(ids)} completed.')
         return result
 
     
     def get_file_ids_by_path_prefix(self, top_level_path: str) -> list[int]:
         """Returns the IDs of all files that are downstream from the given top level path."""
+        
+        # Log 
+        self.logger.info(f'in get_file_ids_by_path_prefix() - retrieving the IDs for files relative to "{top_level_path}"')
         
         # Ensure the path ends with a separator so it's not just a prefix match
         path_prefix:str = top_level_path.rstrip(os.sep) + os.sep + '%'
@@ -154,12 +186,18 @@ class FileMetadataDatabase:
         )
         
         # Fetch results and return 
-        return [row[0] for row in self.cursor.fetchall()]
+        results:list[int] = [row[0] for row in self.cursor.fetchall()]
+        
+        self.logger.info(f'in get_file_ids_by_path_prefix() - got {len(results)} results for top level directory "{top_level_path}"')
+        return 
 
 
     # --- Funcs relating to the "ignore_paths" table --- #     
     def new_ignored_path(self, path:str, type:str) -> None: 
         """Creates a new entry in the "ignored_paths" table for the given path."""
+        
+        # Log
+        self.logger.info(f'in new_ignored_path() - creating a new entry for "{path}" (type = "{type}")')
         
         # Convert the given type to lowercase 
         type = type.lower()
@@ -178,17 +216,23 @@ class FileMetadataDatabase:
             )
             
             # Commit changes 
+            self.logger.info(f'in new_ignored_path() - transaction for "{path}" completed successfully.')
             self.cxn.commit() 
-        
+
+            
         # Handle exceptions
         except sql.IntegrityError: 
             # Integrity error means the path is already ignored - do nothing
+            self.logger.warning(f'in new_ignored_path() - given path "{path}" is already ignored.')
             return 
         
         
     def check_path_ignored(self, path:str) -> bool: 
         """Checks if the given path is ignored. NOTE: the path must actually exist in the filesystem and should be an absolute path."""
-                
+        
+        # Log
+        self.logger.info(f'in check_path_ignored() - checking for "{path}"')
+        
         # Normalize the path 
         path = normalize_path(path) 
                 
@@ -211,7 +255,9 @@ class FileMetadataDatabase:
         result:int = self.cursor.fetchone()
                 
         # Check if we got a direct match
-        if result and result[0] > 0: return True    
+        if result and result[0] > 0: 
+            self.logger.info(f'in check_path_ignored() - "{path}" is ignored (directly).')
+            return True    
         
         # If no direct match and it is a file, check if it is in an ignored directory
         elif t == 'file': 
@@ -232,7 +278,9 @@ class FileMetadataDatabase:
                 )
                 
                 # Return true if there is a result (i.e. this parent is ignored)                
-                if self.cursor.fetchone(): return True
+                if self.cursor.fetchone(): 
+                    self.logger.info(f'in check_path_ignored() - "{path}" is ignored (inheritence from "{parent}")')
+                    return True
                 
                 # If no match, get the parent dir of this dir
                 new_parent:str = os.path.dirname(parent)
@@ -244,11 +292,15 @@ class FileMetadataDatabase:
                 parent = new_parent
 
         # False if we make it here
+        self.logger.info(f'in check_path_ignored() - "{path}" is not ignored.')
         return False
     
         
     def get_ignored_files_in_dir(self, dir_path:str) -> list[str]: 
         """Returns the filepaths for files in the given dir that are ignored."""
+        
+        # Log
+        self.logger.info(f'in get_ignored_files_in_dir() - getting ignored files from the top level directory "{dir_path}"')
         
         # If the dir path does not include a wildcard at the end, then add it
         if not dir_path.endswith('/*'): 
@@ -266,7 +318,10 @@ class FileMetadataDatabase:
         )
         
         # Fetch results and return
-        return [r[0] for r in self.cursor.fetchall()]
+        results:list[str] = [r[0] for r in self.cursor.fetchall()]
+        
+        self.logger.info(f'in get_ignored_files_in_dir() - got {len(results)} for directory "{dir_path}"')
+        return results
     
     
     def get_all_ignored_paths(self) -> list[str]: 
@@ -280,12 +335,19 @@ class FileMetadataDatabase:
     def del_ignored_path(self, path:str) -> None: 
         """Deletes the given path from the "ignored_paths" database if it exists."""
         
+        # Log
+        self.logger.info(f'in del_ignored_path() - deleting entry for "{path}" (if it exists).')
+        
         # Execute query
         self.cursor.execute(
             "DELETE FROM ignored_paths WHERE path = ?",
             (path,)
         )
 
+        # Commit changes
+        self.cxn.commit()
+        self.logger.info(f'in del_ignored_path() - transaction to delete "{path}" completed successfully.')
+        
         
     # --- Other utils --- #
     def table_as_df(self, table_name:str) -> pd.DataFrame: 
