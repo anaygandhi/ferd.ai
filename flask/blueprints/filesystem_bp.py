@@ -5,7 +5,7 @@ import os
 import platform 
 
 from objects import FileMetadataDatabase
-from utils import get_root_directories
+from utils import get_root_directories, normalize_path
 
 
 # --- Config --- #
@@ -15,6 +15,29 @@ fs_bp:Blueprint = Blueprint('fs_bp', __name__)
 
 # --- Endpoints --- # 
 
+@fs_bp.route('/check-path-exists', methods=['GET']) 
+def check_path_exists(): 
+    """Checks if the given path exists in the filesystem."""
+    
+    # Get the path from the req args
+    path:str = request.args.get('path', None)
+    
+    # If no path, return 400
+    if not path: 
+        return jsonify({
+            'error': 'Not given a path.'
+        }), 400
+    
+    # Normalize the path format 
+    norm_path:str = normalize_path(path)
+    
+    # Check if the path exists and return 
+    return jsonify({
+        'path_exists': os.path.exists(norm_path),
+        'path_type': 'directory' if os.path.isdir(norm_path) else 'file'
+    })
+    
+    
 @fs_bp.route("/list-files", methods=["GET"])
 def list_files():
     """ Lists the files in the root directory """
