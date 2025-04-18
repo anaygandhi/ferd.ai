@@ -41,7 +41,11 @@ logger:logging.Logger = setup_logger(
 )
 
 # Init a db cxn
-metadata_db:FileMetadataDatabase = FileMetadataDatabase(METADATA_DB_PATH)
+metadata_db:FileMetadataDatabase = FileMetadataDatabase(
+    METADATA_DB_PATH,
+    log_filepath=os.path.join(LOGS_DIR, 'file_metadata_database.log'),
+    thread_num=-2
+)
 
 # Based on the OS, init default dirs to exclude
 # Windows
@@ -60,7 +64,12 @@ else:
 # Insert each of the paths into the DB
 for p in ignore_dirs: 
     metadata_db.new_ignored_path(p, 'directory')
-        
+
+# Close the metadata_db connection
+metadata_db.cxn.commit()        # Make sure changes are committed
+metadata_db.cursor.close()      # Close the cursor
+metadata_db.cxn.close()         # Close the connection
+
         
 # --- Define func to init and start a FilesystemIndexer for each root dir --- # 
 def init_and_run_indexer(root_dir:str, thread_num:int=0) -> None: 
@@ -73,6 +82,7 @@ def init_and_run_indexer(root_dir:str, thread_num:int=0) -> None:
         INDEX_BIN_PATH,
         EMBEDDING_DIM,
         log_filepath=os.path.join(LOGS_DIR, 'filesystem_indexer', f'filesystem_indexer_{thread_num}.log'),
+        db_log_filepath=os.path.join(LOGS_DIR, 'file_metadata_database', f'file_metadata_db_{thread_num}.log'),
         thread_num=thread_num
     ) 
     
