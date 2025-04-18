@@ -18,9 +18,9 @@ class FilesystemIndexer:
     logger:logging.Logger                    # Logger for saving robust logs
     
     
-    def __init__(self, start_dir:str, metadata_db_path:str, index_bin_path:str, embedding_dim:int, log_filepath:str='logs/filesystem_indexer.log', thread_num:int=0): 
+    def __init__(self, start_dir:str, metadata_db_path:str, index_bin_path:str, embedding_dim:int, log_filepath:str='logs/filesystem_indexer.log', db_log_filepath:str = 'logs/file_metadata_db.log', thread_num:int=0): 
         self.start_dir = start_dir
-        self.file_metadata_db = FileMetadataDatabase(metadata_db_path)
+        self.file_metadata_db = FileMetadataDatabase(metadata_db_path, log_filepath=db_log_filepath, thread_num=thread_num)
         self.index_bin_path = index_bin_path
         self.embedding_dim = embedding_dim
         self.sentence_transformer = SentenceTransformer('all-MiniLM-L6-v2')  
