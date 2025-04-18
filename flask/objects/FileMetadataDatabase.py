@@ -104,7 +104,7 @@ class FileMetadataDatabase:
         """Returns the path for the file with the given ID, while preserving the order of the passed IDs."""
         
         # Check that IDs are actually given
-        if not ids: return []
+        if len(ids) == 0: return []
         
         # Construct the VALUES clause for the query
         values_clause:str = ','.join('(?, ?)' for _ in ids)
