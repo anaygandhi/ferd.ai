@@ -23,6 +23,7 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [queryType, setQueryType] = useState<"general" | "search" | "summarize">("general"); // Track query type
+  const [searchDirectory, setSearchDirectory] = useState("");
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -213,14 +214,25 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
 
             {queryType === "search" && (
               <>
-                <Input
-                  placeholder="Search for a file..."
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                  className="flex-1"
-                  disabled={loading}
-                />
+                <div className="flex flex-col gap-2 w-full">
+                  <label className="text-sm text-muted-foreground">Directory (Optional)</label>
+                  <Input
+                    placeholder="Enter directory to search..."
+                    value={searchDirectory}
+                    onChange={(e) => setSearchDirectory(e.target.value)}
+                    className="flex-1"
+                    disabled={loading}
+                  />
+                  <label className="text-sm text-muted-foreground">Search Query</label>
+                  <Input
+                    placeholder="Enter search query..."
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                    className="flex-1"
+                    disabled={loading}
+                  />
+                </div>
                 <Button size="icon" onClick={handleSend} disabled={loading}>
                   <Send className="h-4 w-4" />
                 </Button>
