@@ -181,7 +181,7 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
             }`}
             onClick={() => setQueryType("general")}
           >
-            General Queries
+            💬 General Queries
           </Button>
           <Button
             variant={queryType === "search" ? "secondary" : "ghost"}
@@ -191,7 +191,7 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
             }`}
             onClick={() => setQueryType("search")}
           >
-            Search for a File
+            🔍 Search for a File
           </Button>
           <Button
             variant={queryType === "summarize" ? "secondary" : "ghost"}
@@ -201,20 +201,32 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
             }`}
             onClick={() => setQueryType("summarize")}
           >
-            File Summarization
+            ✏️ File Summarization
           </Button>
         </div>
 
         {/* Chat Content */}
         <CardContent className="flex-1 p-0 overflow-hidden">
           <ScrollArea className="h-full" ref={chatContainerRef}>
-            <div className="flex flex-col gap-3 p-4">
+            <div className="flex flex-col gap-2 p-3">
               {messages.map((message, index) => (
-                <div key={index} className={`flex ${message.role === "assistant" ? "justify-start" : "justify-end"}`}>
+                <div
+                  key={index}
+                  className={`flex ${
+                    message.role === "assistant" ? "justify-start" : "justify-end"
+                  }`}
+                >
                   <div
-                    className={`rounded-lg px-3 py-2 text-sm shadow ${
-                      message.role === "assistant" ? "bg-muted text-foreground" : "bg-primary text-primary-foreground"
-                    } max-w-[90%] break-words`}
+                    className={`rounded-lg px-2 py-1 text-sm shadow ${
+                      message.role === "assistant"
+                        ? "bg-muted text-foreground"
+                        : "bg-primary text-primary-foreground"
+                    } max-w-[80%] break-words`}
+                    style={{
+                      wordWrap: "break-word", // Ensures long words wrap
+                      overflowWrap: "break-word", // Ensures long text wraps
+                      whiteSpace: "pre-wrap", // Preserves line breaks and ensures wrapping
+                    }}
                   >
                     {message.content}
                   </div>
@@ -222,7 +234,7 @@ export function AIAssistant({ onClose, currentPath, selectedFiles }: AIAssistant
               ))}
               {loading && (
                 <div className="flex justify-start">
-                  <div className="rounded-lg px-3 py-2 text-sm bg-muted text-foreground max-w-[90%] flex items-center gap-2">
+                  <div className="rounded-lg px-2 py-1 text-sm bg-muted text-foreground max-w-[80%] flex items-center gap-2">
                     <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
                     Reasoning...
                   </div>
