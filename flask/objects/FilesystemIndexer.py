@@ -194,3 +194,36 @@ class FilesystemIndexer:
 
         # Return the matched indices
         return indices
+    
+
+    def search_subset(self, query:str, file_ids_to_include:list[int], top_k:int=5) -> list[int]:
+        
+        # If the index filepath doesn't exist OR if no file_ids_to_include are given, 
+        # then we cannot search, so return empty list
+        if (
+            not os.path.exists(self.index_bin_path) or 
+            not file_ids_to_include
+        ): return []
+
+        # Read the existing faiss index
+        full_index:faiss.IndexFlatL2 = faiss.read_index(self.index_bin_path)
+
+        # Init query embedding
+        query_embedding = np.array(
+            self.sentence_transformer.encode(query),
+            dtype=np.float32
+        ).reshape(1, -1)
+
+        # Extract subset of vectors
+        all_vectors:list = full_index.reconstruct_n(0, full_index.ntotal)
+        subset_vectors:list = all_vectors[file_ids_to_include]
+
+        # Create a temporary index with just the subset
+        temp_index = faiss.IndexFlatL2(self.embedding_dim)
+        temp_index.add(subset_vectors)
+
+        # Search the index
+        _, temp_indices = temp_index.search(query_embedding, top_k)
+
+        # Map temporary indices back to real file IDs and return
+        return [file_ids_to_include[i] for i in temp_indices[0]]
