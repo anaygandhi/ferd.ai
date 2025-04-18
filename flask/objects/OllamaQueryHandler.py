@@ -123,9 +123,14 @@ class OllamaQueryHandler:
 
         Returns: 
             str: the Ollama model's response as a string. 
-        """
-        return self.ollama_client.generate(prompt)['response']
-
+        """ 
+        return json.loads(
+            self.ollama_client.generate(
+                model=self.model,
+                prompt=prompt
+            ).model_dump_json()
+        )['response']
+                
 
     def get_confidence(self, query:str, documents_dict:dict[str,str], first_n_toks:int=600) -> dict: 
         """

@@ -65,11 +65,10 @@ print('\n\033[93mNOTICE: \033[0mtesting Ollama client with question: "What is th
 
 try: 
     response = app.ollama_query_handler.generate(
-        model=app.MODEL_ID, 
         prompt='What is the capital of France?'
     )
 
-    print('\033[93mNOTICE: \033[0mOllama response:', response['response'])
+    print('\033[93mNOTICE: \033[0mOllama response:', response)
 
 # Handle exceptions
 # Ollama response error most likely means the proper model is not pulled
